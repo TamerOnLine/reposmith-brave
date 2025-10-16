@@ -1,0 +1,23 @@
+name: 💡 Idea
+description: Share a new idea or improvement
+title: "Idea: "
+labels: [idea]
+body:
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: Briefly describe your idea
+      placeholder: "The idea is ..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: benefits
+    attributes:
+      label: Benefits
+      description: What are the expected benefits of this idea?
+      placeholder: |
+        - Improve ...
+        - Reduce ...
+        - Add ...

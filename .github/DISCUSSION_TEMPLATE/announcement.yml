@@ -1,0 +1,17 @@
+name: 📣 Announcement
+description: Share an update or announcement
+title: "Announcement: "
+labels: [announcement]
+body:
+  - type: textarea
+    id: details
+    attributes:
+      label: Details
+      description: Write the announcement or news here
+      placeholder: |
+        Example:
+        - New release 0.x
+        - Event or Meetup
+        - Important project change
+    validations:
+      required: true

@@ -1,0 +1,23 @@
+name: 💬 General Discussion
+description: Start an open discussion about anything related to the project
+title: "Discussion: "
+labels: [discussion]
+body:
+  - type: textarea
+    id: topic
+    attributes:
+      label: Topic
+      description: What is the discussion about?
+      placeholder: "The topic is ..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: details
+    attributes:
+      label: Details
+      description: Provide background or more information for the discussion
+      placeholder: |
+        - Why is this important?
+        - What would you like to discuss?
+        - Suggestions or feedback

@@ -1,0 +1,43 @@
+name: ✅ Task / ToDo
+description: A general task or administrative work within the project.
+title: "Task: "
+labels: [task]
+body:
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: Briefly describe the task
+      placeholder: "The required task is ..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: details
+    attributes:
+      label: Details
+      description: Provide additional details or implementation steps
+      placeholder: |
+        1. Do ...
+        2. Then ...
+        3. Verify ...
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority
+      description: What is the priority of this task?
+      options:
+        - Low
+        - Medium
+        - High
+
+  - type: textarea
+    id: checklist
+    attributes:
+      label: Checklist
+      description: Add sub-steps that can be tracked
+      placeholder: |
+        - [ ] Step 1
+        - [ ] Step 2
+        - [ ] Step 3

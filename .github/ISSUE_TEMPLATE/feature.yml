@@ -1,0 +1,29 @@
+name: ✨ Feature Request
+description: Suggest a new feature for the project.
+title: "Feature: "
+labels: [feature, enhancement]
+body:
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: Briefly explain the proposed feature
+      placeholder: "The proposed feature is ..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: motivation
+    attributes:
+      label: Motivation
+      description: Why is this feature important?
+      placeholder: "Because it helps to ..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: implementation
+    attributes:
+      label: Possible Implementation
+      description: How do you imagine it could be implemented?
+      placeholder: "It could be implemented by ..."

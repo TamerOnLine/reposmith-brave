@@ -1,0 +1,16 @@
+name: ❓ Question
+description: Ask a question about the project
+title: "Question: "
+labels: [question]
+body:
+  - type: textarea
+    id: details
+    attributes:
+      label: Details
+      description: ضع سؤالك هنا بشكل واضح
+      placeholder: |
+        مثال:
+        - كيف أستخدم ميزة ...
+        - هل يمكن الجمع بين ...
+    validations:
+      required: true
