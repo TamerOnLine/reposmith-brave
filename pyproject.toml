@@ -34,7 +34,8 @@ Documentation = "https://liebemama.github.io/RepoSmith/"
 Support = "https://github.com/liebemama/RepoSmith/discussions"
 
 [project.scripts]
-reposmith = "reposmith.main:main"
+reposmith = "reposmith.cli:main"
+
 
 [tool.setuptools.packages.find]
 where = ["."]

@@ -21,20 +21,29 @@ def create_virtualenv(venv_dir, python_version=None) -> str:
         print("Virtual environment already exists.")
         return "exists"
 
+import shutil
+
 def install_requirements(venv_dir, requirements_path) -> str:
     print("\n[4] Installing requirements")
     py = _venv_python(venv_dir)
 
-    if os.path.exists(requirements_path) and os.path.getsize(requirements_path) > 0:
-        subprocess.run(
-            [py, "-m", "pip", "install", "-r", requirements_path, "--upgrade-strategy", "only-if-needed"],
-            check=True,
-        )
-        print("Packages installed.")
-        return "written"
-    else:
+    if not (os.path.exists(requirements_path) and os.path.getsize(requirements_path) > 0):
         print("requirements.txt is empty or missing, skipping install.")
         return "skipped"
+
+    if shutil.which("uv"):
+        # استخدام uv داخل نفس الـ venv
+        # 1) تأكد من pip داخل venv (اختياري)
+        subprocess.run([py, "-m", "pip", "install", "--upgrade", "pip"], check=True)
+        # 2) ثبّت بالحِزم عبر uv (أسرع بكثير)
+        subprocess.run(["uv", "pip", "install", "-r", requirements_path, "--python", py], check=True)
+        print("Packages installed via uv.")
+        return "written(uv)"
+    else:
+        subprocess.run([py, "-m", "pip", "install", "-r", requirements_path, "--upgrade-strategy", "only-if-needed"], check=True)
+        print("Packages installed via pip.")
+        return "written(pip)"
+
 
 def upgrade_pip(venv_dir) -> str:
     print("\n[5] Upgrading pip")

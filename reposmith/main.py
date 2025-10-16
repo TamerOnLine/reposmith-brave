@@ -193,6 +193,8 @@ def main(argv=None):
         print("Project setup complete.")
 
 
+from .cli import main
 if __name__ == "__main__":
     main()
+
 
