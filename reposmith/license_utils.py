@@ -1,17 +1,34 @@
-﻿from datetime import datetime
+﻿from __future__ import annotations
 from pathlib import Path
+from datetime import datetime
 
 
-def create_license(root, license_type="MIT", owner_name="Tamer", force=False):
-    """Create a LICENSE file with optional owner name."""
+def create_license(
+    root,
+    license_type: str = "MIT",
+    owner_name: str = "Tamer",
+    force: bool = False,
+):
+    """
+    Create a LICENSE file in `root`.
+    - Supports only MIT for now.
+    - Uses current year.
+    - If file exists and force=False, do nothing.
+    - If file exists and force=True, overwrite (no emoji, ASCII-only prints).
+    """
     year = datetime.now().year
     target = Path(root) / "LICENSE"
 
-    if target.exists() and not force:
-        print("â„¹ï¸ڈ LICENSE already exists (use --force to overwrite).")
-        return
+    # Only MIT is supported by this minimal implementation
+    if license_type != "MIT":
+        raise ValueError(f"Unsupported license type: {license_type}")
 
-    mit_license = f"""MIT License
+    # Respect existing file unless forced
+    if target.exists() and not force:
+        print("LICENSE already exists (use --force to overwrite).")
+        return target
+
+    mit_text = f"""MIT License
 
 Copyright (c) {year} {owner_name}
 
@@ -33,7 +50,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 """
-    target.write_text(mit_license, encoding="utf-8")
-    print(f"ًں“œ LICENSE file created for {owner_name} ({license_type}).")
 
-
+    target.write_text(mit_text, encoding="utf-8")
+    print(f"LICENSE file created for {owner_name} ({license_type}).")
+    return target
