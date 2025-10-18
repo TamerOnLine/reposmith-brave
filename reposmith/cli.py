@@ -5,14 +5,17 @@ RepoSmith CLI Entry Point
 
 Includes:
 - Project initialization command (init)
-- New Brave Profile command (brave-profile --init)
+- Brave Profile command (brave-profile --init)
 
 Usage examples:
     reposmith init --root . --use-uv --with-brave
     reposmith brave-profile --init
 """
 
+from __future__ import annotations
+
 import argparse
+import os
 from pathlib import Path
 from importlib.metadata import version, PackageNotFoundError
 
@@ -24,13 +27,14 @@ from .gitignore_utils import create_gitignore
 from .license_utils import create_license
 from .env_manager import install_deps_with_uv
 from .brave_profile import init_brave_profile
+from .logging_utils import setup_logging
 
 
-def build_parser():
+def build_parser() -> argparse.ArgumentParser:
     """Create and configure RepoSmith CLI commands."""
     parser = argparse.ArgumentParser(
         prog="reposmith",
-        description="RepoSmith: Bootstrap Python projects (venv + uv + Brave)"
+        description="RepoSmith: Bootstrap Python projects (venv + uv + Brave)",
     )
 
     try:
@@ -39,6 +43,18 @@ def build_parser():
         ver = "0.0.0"
 
     parser.add_argument("--version", action="version", version=f"RepoSmith-tol {ver}")
+    parser.add_argument(
+        "--log-level",
+        default="INFO",
+        choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
+        help="Logging level (default: INFO)",
+    )
+    parser.add_argument(
+        "--no-emoji",
+        action="store_true",
+        help="Disable emojis in console output for maximum portability.",
+    )
+
     sub = parser.add_subparsers(dest="cmd", required=True)
 
     # Init command
@@ -61,21 +77,23 @@ def build_parser():
     return parser
 
 
-def main():
+def main() -> None:
     """Main entry point for RepoSmith CLI."""
     parser = build_parser()
     args = parser.parse_args()
 
-    if args.cmd == "init":
-        root = args.root
-        root.mkdir(parents=True, exist_ok=True)
-        print(f"🚀 Initializing project at: {root}")
+    logger = setup_logging(level=getattr(args, "log_level", "INFO"), no_emoji=getattr(args, "no_emoji", False))
 
-        # 1️⃣ Create virtual environment
+    if args.cmd == "init":
+        root: Path = args.root
+        root.mkdir(parents=True, exist_ok=True)
+        logger.info("🚀 Initializing project at: %s", root)
+
+        # 1) Create virtual environment
         venv_dir = root / ".venv"
         create_virtualenv(venv_dir)
 
-        # 2️⃣ Install dependencies (uv or pip)
+        # 2) Install dependencies (uv or pip)
         req = root / "requirements.txt"
         if args.use_uv:
             install_deps_with_uv(root)
@@ -83,14 +101,14 @@ def main():
             if req.exists() and req.stat().st_size > 0:
                 install_requirements(venv_dir, str(req))
             else:
-                print("No requirements.txt found (or empty) — skipping install.")
+                logger.debug("No requirements.txt found (or empty) — skipping install.")
 
-        # 3️⃣ Create main.py file (fix: use file path, not folder)
+        # 3) Create main.py file (use file path, not folder)
         main_file = root / "main.py"
         create_app_file(main_file, force=args.force)
-        print(f"[entry] main.py created at: {main_file}")
+        logger.info("[entry] main.py created at: %s", main_file)
 
-        # 4️⃣ Optional add-ons
+        # 4) Optional add-ons
         if args.with_vscode:
             create_vscode_files(root, venv_dir, main_file=str(main_file), force=args.force)
 
@@ -100,19 +118,19 @@ def main():
         if args.with_license:
             create_license(root, license_type="MIT", owner_name="Tamer", force=args.force)
 
-        # 5️⃣ CI workflow
+        # 5) CI workflow
         ensure_github_actions_workflow(root)
 
-        # 6️⃣ Brave integration
+        # 6) Brave integration
         if args.with_brave:
             init_brave_profile(root)
-            print("🦁 Brave Dev Profile initialized successfully.")
+            logger.info("🦁 Brave Dev Profile initialized successfully.")
 
-        print(f"✅ Project initialized successfully at: {root}")
+        logger.info("✅ Project initialized successfully at: %s", root)
 
     elif args.cmd == "brave-profile" and args.init:
         init_brave_profile(args.root)
-        print("🦁 Brave Dev Profile ready to use.")
+        logger.info("🦁 Brave Dev Profile ready to use.")
 
     else:
         parser.print_help()
