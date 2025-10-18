@@ -46,8 +46,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--log-level",
         default="INFO",
-        choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
-        help="Logging level (default: INFO)",
+        help="Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL). Default: INFO",
     )
     parser.add_argument(
         "--no-emoji",
