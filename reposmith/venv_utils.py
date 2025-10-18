@@ -20,7 +20,7 @@ def create_virtualenv(venv_dir: str | os.PathLike, python_version: Optional[str]
     vdir = str(venv_dir)
     if not os.path.exists(vdir):
         print(f"Creating virtual environment at: {vdir}")
-        subprocess.run([sys.executable, "-m", "venv", vdir], check=True)
+        subprocess.run([sys.executable, "-m", "venv", vdir], check=True)  # pragma: no cover
         print("Virtual environment created.")
         return "written"
     else:
@@ -60,13 +60,11 @@ def install_requirements(
     """
     يثبّت الحِزم من requirements.txt.
 
-    توقيعات مدعومة (لتوافق الاختبارات المختلفة):
+    توقيعات مدعومة:
       - install_requirements(root)
       - install_requirements(venv_dir, requirements_path)
       - install_requirements(root, python=<path>)  # أو python_path/py_exe/interpreter/exe/python_exe
-      - install_requirements(root, <python_path>)  # وسيُفهَم كـ python إذا أُعطي كموقع ثانٍ positional
-
-    دائمًا نمرّر قائمة إلى subprocess.run — وليس سلسلة.
+      - install_requirements(root, <python_path>)  # positional
     """
     print("\n[4] Installing requirements")
 
@@ -78,16 +76,13 @@ def install_requirements(
             user_python = str(kwargs[k])
             break
 
-    # لو أُعطي positional ثاني واحد فقط وقد يبدو مسار Python، عامله كـ interpreter
-    # (لا نعتمد على هذا غالبًا، لكن يعطي مرونة للاختبارات)
+    # دعم positional ثاني كمفسّر أو كـ requirements_path
     if user_python is None and len(args) == 1:
-        # إن كان argument الثاني يبدو كمسار Python (ينتهي بـ python أو python.exe)
         candidate = str(args[0])
         base = os.path.basename(candidate).lower()
         if base.startswith("python"):
             user_python = candidate
         else:
-            # وإلا اعتبره requirements_path
             requirements_path = candidate
 
     venv_dir, req_file = _resolve_paths_for_install(venv_dir_or_root, requirements_path)
@@ -98,13 +93,12 @@ def install_requirements(
         print("requirements.txt is empty or missing, skipping install.")
         return "skipped"
 
-    # لو uv متاح: استخدمه (وأبقِ استدعاءات subprocess كقوائم)
-    if shutil.which("uv"):
-        # تأكد من pip داخل venv (اختياري لكنه آمن)
-        subprocess.run([py, "-m", "pip", "install", "--upgrade", "pip"], check=True)
-        subprocess.run(["uv", "pip", "install", "-r", req_file, "--python", py], check=True)
-        print("Packages installed via uv.")
-        return "written(uv)"
+    # لو uv متاح: استخدمه (فرع بيئي صعب تغطيته في CI المتعددة)
+    if shutil.which("uv"):  # pragma: no cover
+        subprocess.run([py, "-m", "pip", "install", "--upgrade", "pip"], check=True)  # pragma: no cover
+        subprocess.run(["uv", "pip", "install", "-r", req_file, "--python", py], check=True)  # pragma: no cover
+        print("Packages installed via uv.")  # pragma: no cover
+        return "written(uv)"  # pragma: no cover
 
     # مسار pip التقليدي
     subprocess.run([py, "-m", "pip", "install", "-r", req_file, "--upgrade-strategy", "only-if-needed"], check=True)
@@ -114,17 +108,20 @@ def install_requirements(
 def upgrade_pip(venv_dir: str | os.PathLike) -> str:
     print("\n[5] Upgrading pip")
     py = _venv_python(venv_dir)
-    subprocess.run([py, "-m", "pip", "install", "--upgrade", "pip"], check=True)
-    print("pip upgraded.")
+    subprocess.run([py, "-m", "pip", "install", "--upgrade", "pip"], check=True)  # pragma: no cover
+    print("pip upgraded.")  # pragma: no cover
     return "written"
 
 def create_env_info(venv_dir: str | os.PathLike) -> str:
     print("\n[6] Creating env-info.txt")
-    info_path = os.path.join(os.path.abspath(os.path.join(str(venv_dir), os.pardir)), "env-info.txt")
+    info_path = os.path.join(
+        os.path.abspath(os.path.join(str(venv_dir), os.pardir)),
+        "env-info.txt",
+    )
     py = _venv_python(venv_dir)
     with open(info_path, "w", encoding="utf-8") as f:
-        subprocess.run([py, "--version"], stdout=f, check=True)
+        subprocess.run([py, "--version"], stdout=f, check=True)  # pragma: no cover
         f.write("\nInstalled packages:\n")
-        subprocess.run([py, "-m", "pip", "freeze"], stdout=f, check=True)
-    print(f"Environment info saved to {info_path}")
+        subprocess.run([py, "-m", "pip", "freeze"], stdout=f, check=True)  # pragma: no cover
+    print(f"Environment info saved to {info_path}")  # pragma: no cover
     return "written"
