@@ -1,4 +1,4 @@
-from datetime import datetime
+﻿from datetime import datetime
 from pathlib import Path
 
 
@@ -8,7 +8,7 @@ def create_license(root, license_type="MIT", owner_name="Tamer", force=False):
     target = Path(root) / "LICENSE"
 
     if target.exists() and not force:
-        print("ℹ️ LICENSE already exists (use --force to overwrite).")
+        print("â„¹ï¸ڈ LICENSE already exists (use --force to overwrite).")
         return
 
     mit_license = f"""MIT License
@@ -34,4 +34,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 """
     target.write_text(mit_license, encoding="utf-8")
-    print(f"📜 LICENSE file created for {owner_name} ({license_type}).")
+    print(f"ًں“œ LICENSE file created for {owner_name} ({license_type}).")
+
+
