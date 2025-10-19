@@ -26,27 +26,28 @@ CHANGELOG = ROOT / "CHANGELOG.md"
 
 
 def _load_version() -> str:
-    data = PYPROJECT.read_bytes()
-    # tomllib is stdlib in Python 3.11+
+    """Read version string from pyproject.toml safely (Python 3.11+ or tomli)."""
     try:
-        import tomllib as toml
-    except Exception:  # pragma: no cover
-        import tomli as toml  # fallback if someone runs on 3.10
+        import tomllib  # Python 3.11+
+    except ModuleNotFoundError:
+        import tomli as tomllib  # type: ignore[no-redef]
 
-    doc = toml.loads(data)
+    # ✅ نستخدم open("rb") + tomllib.load(fp)
+    with PYPROJECT.open("rb") as fp:
+        doc = tomllib.load(fp)
+
     ver = (
         doc.get("project", {}).get("version")
         or doc.get("tool", {}).get("poetry", {}).get("version")
     )
     if not ver:
-        raise RuntimeError("Could not find version in pyproject.toml")
+        raise RuntimeError("❌ Could not find version in pyproject.toml")
     return str(ver)
 
 
 def _ensure_changelog_exists() -> None:
     if CHANGELOG.exists():
         return
-    # Minimal header if changelog is missing
     tpl = (
         "# 📦 Changelog\n\n"
         "All notable changes to this project will be documented in this file.\n"
@@ -70,22 +71,16 @@ def _entry_block(version: str, date_str: str) -> str:
 
 
 def _insert_entry_if_missing(version: str) -> bool:
-    """
-    Returns True if a new entry was inserted, False if it already existed.
-    """
+    """Insert changelog entry if version not already present."""
     content = CHANGELOG.read_text(encoding="utf-8")
-    # Already present?
+
     if re.search(rf"^##\s*\[\s*{re.escape(version)}\s*\]", content, flags=re.M):
         return False
 
-    # Find insertion point: right after the first '---' separator if present,
-    # otherwise after the header line(s)
     insert_idx = content.find("\n---")
     if insert_idx != -1:
-        # Move to line after the '---' block
         insert_idx = content.find("\n", insert_idx + 1) + 1
     else:
-        # After initial header (safe default = start of file end)
         insert_idx = len(content)
 
     today = _dt.date.today().isoformat()
@@ -101,7 +96,6 @@ def _run(cmd: list[str], check: bool = True) -> subprocess.CompletedProcess:
 
 def _git_commit(version: str) -> None:
     _run(["git", "add", str(CHANGELOG)])
-    # If pyproject was also changed by you, it will be included by your workflow
     _run(["git", "commit", "-m", f"docs: update changelog for v{version}"])
 
 
