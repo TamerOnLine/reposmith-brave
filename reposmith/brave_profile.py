@@ -1,5 +1,4 @@
 from __future__ import annotations
-
 import json
 from pathlib import Path
 
@@ -10,18 +9,18 @@ from pathlib import Path
 LAUNCH_BRAVE_PS1 = r'''
 <#
 .SYNOPSIS
-  Launch Brave with a per-project profile and open selected local dev URLs.
+  Launch Brave with project-defined ports and open related URLs.
 
 .DESCRIPTION
-  - Detects common local dev ports (3000, 5173, 8000, 8080, 5000, ...).
+  - Reads ports from .brave-ports.conf (one port per line).
+  - If no file is found, defaults to ports 8000 and 5173.
   - Reads extra URLs from .brave-profile.conf (one URL per line).
-  - Shows an interactive selection menu (or use -Auto / -NoTabs / -Ports).
+  - Allows optional -Auto or -NoTabs flags.
 #>
 
 param(
   [string]$Name = "Brave (Project)",
   [string]$ProfileDir = ".brave-profile",
-  [string]$Ports = "",
   [switch]$Auto,
   [switch]$NoTabs
 )
@@ -30,137 +29,73 @@ param(
 
 function Resolve-Brave {
   $paths = @(
+    "$Env:LOCALAPPDATA\BraveSoftware\Brave-Browser\Application\brave.exe",
     "$Env:ProgramFiles\BraveSoftware\Brave-Browser\Application\brave.exe",
     "$Env:ProgramFiles(x86)\BraveSoftware\Brave-Browser\Application\brave.exe"
   )
-  foreach ($p in $paths) {
-    if (Test-Path $p) { return $p }
-  }
-  throw "Brave not found in Program Files."
+  foreach ($p in $paths) { if (Test-Path $p) { return $p } }
+  throw "Brave not found."
 }
 
-function Test-PortOpen {
-  param([int]$Port)
-  try {
-    return (Test-NetConnection -ComputerName 'localhost' -Port $Port -WarningAction SilentlyContinue -InformationLevel Quiet)
-  }
-  catch {
-    return $false
-  }
-}
-
-$PORT_LABELS = @{
-  3000 = "Next.js / React"
-  5173 = "Vite"
-  8000 = "FastAPI / Uvicorn / http.server"
-  8080 = "Generic dev / Webpack / Serve"
-  5000 = "Flask"
-  4200 = "Angular"
-  5500 = "Live Server"
-  8001 = "Service"
-  8002 = "Service"
-  8888 = "Jupyter"
-  7000 = "Service"
-  9000 = "Service"
-}
-
-function Get-PortFromUrl {
-  param([string]$Url)
-  try { return [int]([uri]$Url).Port } catch { return $null }
-}
-
-function Format-UrlWithLabel {
-  param([string]$Url)
-  $p = Get-PortFromUrl -Url $Url
-  if ($p -and $PORT_LABELS.ContainsKey($p)) {
-    return "$Url — $($PORT_LABELS[$p])"
-  }
-  return $Url
-}
-
-function Detect-OpenDevPorts {
-  $default = @(3000,5173,8000,8080,5000,4200,5500,7000,9000,8001,8002,8888)
-  $extra = @()
-  if ($Ports) {
-    $Ports.Split(',') | ForEach-Object {
-      if ($_ -match '^\s*\d+\s*$') { $extra += [int]$_ }
+function Read-Ports {
+  $conf = Join-Path (Get-Location) ".brave-ports.conf"
+  $ports = @()
+  if (Test-Path $conf) {
+    Get-Content $conf | ForEach-Object {
+      $t = $_.Trim()
+      if ($t -match '^\d+$') { $ports += [int]$t }
     }
   }
-  $scan = ($default + $extra) | Select-Object -Unique | Sort-Object
-  $open = foreach ($p in $scan) {
-    if (Test-PortOpen $p) { "http://localhost:$p" }
-  }
-  return ,$open
+  if ($ports.Count -eq 0) { $ports = @(8000,5173) }
+  return $ports
 }
 
-function Read-ExtraUrlsFromConf {
+function Read-ExtraUrls {
   $conf = Join-Path (Get-Location) ".brave-profile.conf"
+  $urls = @()
   if (Test-Path $conf) {
     Get-Content $conf | ForEach-Object {
       $u = $_.Trim()
-      if ($u -and -not $u.StartsWith('#')) { $u }
+      if ($u -and -not $u.StartsWith('#')) { $urls += $u }
     }
   }
+  return $urls
 }
 
-function Pick-UrlsInteractive {
-  param([string[]]$OpenUrls, [string[]]$FromConf)
-  $choices = @()
-
-  if ($OpenUrls.Count -gt 0) {
-    $choices += $OpenUrls | ForEach-Object { "[RUNNING] " + (Format-UrlWithLabel $_) }
-  }
-  if ($FromConf.Count -gt 0) {
-    $choices += $FromConf | ForEach-Object { "[CONF]    " + (Format-UrlWithLabel $_) }
-  }
-
-  if ($choices.Count -eq 0) {
-    Write-Host "No running dev servers detected. You can still open Brave profile. (`-NoTabs` to suppress tabs.)" -ForegroundColor Yellow
-    return @()
-  }
-
-  Write-Host ""
-  Write-Host "Select URLs to open (comma-separated indices) or press Enter for all:" -ForegroundColor Cyan
-  for ($i=0; $i -lt $choices.Count; $i++) {
-    Write-Host ("[{0}] {1}" -f $i, $choices[$i])
-  }
-  Write-Host ""
-  $inputSel = Read-Host "Your choice"
-
-  if ([string]::IsNullOrWhiteSpace($inputSel)) {
-    return $OpenUrls + $FromConf | Select-Object -Unique
-  }
-
-  $indices = $inputSel -split '[,\s]+' |
-    Where-Object { $_ -match '^\d+$' } |
-    ForEach-Object { [int]$_ } |
-    Where-Object { $_ -ge 0 -and $_ -lt $choices.Count }
-
-  $picked = foreach ($ix in $indices) {
-    $raw = $choices[$ix] -replace '^\[(RUNNING|CONF)\]\s+',''
-    $raw -replace '\s—\s.*$',''
-  }
-  return $picked | Select-Object -Unique
-}
+# ---- Main ------------------------------------------------------------------
 
 $brave = Resolve-Brave
 $profilePath = Join-Path (Get-Location) $ProfileDir
 New-Item -ItemType Directory -Force -Path $profilePath | Out-Null
 
-$urlsRunning = Detect-OpenDevPorts
-$urlsConf    = Read-ExtraUrlsFromConf | Where-Object { $_ -match '^https?://' }
+$ports = Read-Ports
+$urlsPorts = $ports | ForEach-Object { "http://localhost:$($_)" }
+$urlsConf  = Read-ExtraUrls
 
 if ($NoTabs) {
   $urlsToOpen = @()
 }
 elseif ($Auto) {
-  $urlsToOpen = ($urlsRunning + $urlsConf) | Select-Object -Unique
+  $urlsToOpen = ($urlsPorts + $urlsConf) | Select-Object -Unique
 }
 else {
-  $urlsToOpen = Pick-UrlsInteractive -OpenUrls $urlsRunning -FromConf $urlsConf
+  Write-Host "Available URLs:" -ForegroundColor Cyan
+  $combined = ($urlsPorts + $urlsConf) | Select-Object -Unique
+  for ($i=0; $i -lt $combined.Count; $i++) {
+    Write-Host "[$i] $($combined[$i])"
+  }
+  $choice = Read-Host "Enter comma-separated indices or press Enter for all"
+  if ([string]::IsNullOrWhiteSpace($choice)) {
+    $urlsToOpen = $combined
+  } else {
+    $indices = $choice -split '[,\s]+' | ForEach-Object { [int]$_ }
+    $urlsToOpen = foreach ($ix in $indices) {
+      if ($ix -ge 0 -and $ix -lt $combined.Count) { $combined[$ix] }
+    }
+  }
 }
 
-$argList = @("--user-data-dir=\"$profilePath\"")
+$argList = @("--user-data-dir=$profilePath")
 foreach ($u in $urlsToOpen) { $argList += @("--new-tab", $u) }
 
 Start-Process -FilePath $brave -ArgumentList $argList
@@ -168,7 +103,7 @@ Write-Host "Brave launched with profile: $profilePath" -ForegroundColor Green
 if ($urlsToOpen.Count -gt 0) {
   Write-Host ("Opened tabs:`n - " + ($urlsToOpen -join "`n - "))
 } else {
-  Write-Host "No tabs opened (profile only). Use -Auto or add URLs to .brave-profile.conf" -ForegroundColor Yellow
+  Write-Host "No tabs opened (profile only). Add ports in .brave-ports.conf." -ForegroundColor Yellow
 }
 '''
 
@@ -206,11 +141,14 @@ if (Test-Path $path) {
 '''
 
 DEFAULT_CONF = """# Lines starting with # are ignored.
-# Put any URLs you want Brave to open with this project profile, one per line.
-# Examples:
-# http://127.0.0.1:8000
-# http://localhost:3000
+# Add URLs to open automatically (one per line)
+# http://localhost:8000
 # http://localhost:5173
+"""
+
+DEFAULT_PORTS_CONF = """# Ports for this project (one per line)
+8000
+5173
 """
 
 # ---------------------------------------------------------------------------
@@ -218,11 +156,7 @@ DEFAULT_CONF = """# Lines starting with # are ignored.
 # ---------------------------------------------------------------------------
 
 def init_brave_profile(root: Path) -> None:
-    """Scaffold per-project Brave profile and tools into the specified root directory.
-
-    Args:
-        root (Path): The project root directory to initialize.
-    """
+    """Scaffold per-project Brave profile and tools."""
     root = Path(root)
     tools = root / "tools"
     tools.mkdir(parents=True, exist_ok=True)
@@ -231,27 +165,24 @@ def init_brave_profile(root: Path) -> None:
     prof.mkdir(exist_ok=True)
 
     (prof / "README.txt").write_text(
-        "Per-project Brave profile. Launch Brave with --user-data-dir pointing here.\n",
-        encoding="utf-8"
+        "Per-project Brave profile.\nLaunch Brave with --user-data-dir pointing here.\n",
+        encoding="utf-8",
     )
 
     (prof / "prefs.json").write_text(
         json.dumps({"homepage": "about:blank", "first_run_tabs": []}, indent=2),
-        encoding="utf-8"
+        encoding="utf-8",
     )
 
     (root / ".brave-profile.conf").write_text(DEFAULT_CONF, encoding="utf-8")
+    (root / ".brave-ports.conf").write_text(DEFAULT_PORTS_CONF, encoding="utf-8")
 
     (tools / "launch_brave.ps1").write_text(LAUNCH_BRAVE_PS1.lstrip(), encoding="utf-8")
     (tools / "make_brave_shortcut.ps1").write_text(MAKE_SHORTCUT_PS1.lstrip(), encoding="utf-8")
     (tools / "cleanup_brave_profile.ps1").write_text(CLEANUP_PS1.lstrip(), encoding="utf-8")
 
 def add_vscode_task(root: Path) -> None:
-    """Append Brave-related launch tasks to VS Code tasks.json configuration.
-
-    Args:
-        root (Path): The root directory of the project.
-    """
+    """Append Brave launch tasks to VS Code tasks.json."""
     vscode = root / ".vscode"
     vscode.mkdir(exist_ok=True)
     tasks = vscode / "tasks.json"
@@ -264,23 +195,23 @@ def add_vscode_task(root: Path) -> None:
                 "type": "shell",
                 "command": "pwsh",
                 "args": ["-File", "${workspaceFolder}/tools/launch_brave.ps1"],
-                "problemMatcher": []
+                "problemMatcher": [],
             },
             {
                 "label": "Brave: Launch (Auto)",
                 "type": "shell",
                 "command": "pwsh",
                 "args": ["-File", "${workspaceFolder}/tools/launch_brave.ps1", "-Auto"],
-                "problemMatcher": []
+                "problemMatcher": [],
             },
             {
                 "label": "Brave: Launch (No Tabs)",
                 "type": "shell",
                 "command": "pwsh",
                 "args": ["-File", "${workspaceFolder}/tools/launch_brave.ps1", "-NoTabs"],
-                "problemMatcher": []
-            }
-        ]
+                "problemMatcher": [],
+            },
+        ],
     }
 
     if tasks.exists():
@@ -300,11 +231,7 @@ def add_vscode_task(root: Path) -> None:
     tasks.write_text(json.dumps(task_obj, indent=2), encoding="utf-8")
 
 def setup_brave(root: Path) -> None:
-    """Set up Brave profile integration including tools and VS Code tasks.
-
-    Args:
-        root (Path): The root directory to configure.
-    """
+    """Set up Brave integration."""
     init_brave_profile(root)
     add_vscode_task(root)
 
