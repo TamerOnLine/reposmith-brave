@@ -29,9 +29,12 @@ from .env_manager import install_deps_with_uv
 from .brave_profile import init_brave_profile
 from .logging_utils import setup_logging
 
-
 def build_parser() -> argparse.ArgumentParser:
-    """Create and configure RepoSmith CLI commands."""
+    """Create and configure RepoSmith CLI commands.
+
+    Returns:
+        argparse.ArgumentParser: Configured argument parser for CLI.
+    """
     parser = argparse.ArgumentParser(
         prog="reposmith",
         description="RepoSmith: Bootstrap Python projects (venv + uv + Brave)",
@@ -66,7 +69,11 @@ def build_parser() -> argparse.ArgumentParser:
     sc.add_argument("--with-gitignore", action="store_true", help="Include default .gitignore file")
     sc.add_argument("--with-vscode", action="store_true", help="Include VS Code settings")
     sc.add_argument("--use-uv", action="store_true", help="Install dependencies using uv (faster)")
-    sc.add_argument("--with-brave", action="store_true", help="Initialize Brave project profile after scaffolding")
+    sc.add_argument(
+        "--with-brave",
+        action="store_true",
+        help="Initialize Brave project profile after scaffolding",
+    )
 
     # Brave profile command (standalone)
     bp = sub.add_parser("brave-profile", help="Manage Brave dev profile scaffolding")
@@ -75,13 +82,15 @@ def build_parser() -> argparse.ArgumentParser:
 
     return parser
 
-
 def main() -> None:
     """Main entry point for RepoSmith CLI."""
     parser = build_parser()
     args = parser.parse_args()
 
-    logger = setup_logging(level=getattr(args, "log_level", "INFO"), no_emoji=getattr(args, "no_emoji", False))
+    logger = setup_logging(
+        level=getattr(args, "log_level", "INFO"),
+        no_emoji=getattr(args, "no_emoji", False),
+    )
 
     if args.cmd == "init":
         root: Path = args.root
@@ -102,7 +111,7 @@ def main() -> None:
             else:
                 logger.debug("No requirements.txt found (or empty) — skipping install.")
 
-        # 3) Create main.py file (use file path, not folder)
+        # 3) Create main.py file
         main_file = root / "main.py"
         create_app_file(main_file, force=args.force)
         logger.info("[entry] main.py created at: %s", main_file)
@@ -133,7 +142,6 @@ def main() -> None:
 
     else:
         parser.print_help()
-
 
 if __name__ == "__main__":
     main()

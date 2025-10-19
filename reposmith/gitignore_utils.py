@@ -1,9 +1,12 @@
-from .core.fs import write_file
+from __future__ import annotations
+
 from pathlib import Path
 from typing import Union
 
+from .core.fs import write_file
+
 PYTHON_GITIGNORE = """# =========================
-# 🧠 Python: Bytecode, Caches, Compiled Files
+# Python: Bytecode, Caches, Compiled Files
 # =========================
 __pycache__/
 *.py[cod]
@@ -15,7 +18,7 @@ __pycache__/
 cython_debug/
 
 # =========================
-# ⚙️ Virtual Environments
+# Virtual Environments
 # =========================
 .env
 .env.*
@@ -31,7 +34,7 @@ venv.bak/
 __pypackages__/
 
 # =========================
-# 📦 Package/Build Artifacts
+# Package/Build Artifacts
 # =========================
 .Python
 build/
@@ -53,13 +56,13 @@ share/python-wheels/
 MANIFEST
 
 # =========================
-# 📄 Installer Logs
+# Installer Logs
 # =========================
 pip-log.txt
 pip-delete-this-directory.txt
 
 # =========================
-# 🧪 Testing / Coverage
+# Testing / Coverage
 # =========================
 htmlcov/
 .coverage
@@ -80,13 +83,13 @@ coverage/
 .hypothesis/
 
 # =========================
-# 🌍 Translations
+# Translations
 # =========================
 *.mo
 *.pot
 
 # =========================
-# 🌐 Django / Flask / Scrapy
+# Django / Flask / Scrapy
 # =========================
 *.log
 local_settings.py
@@ -97,7 +100,7 @@ instance/
 .scrapy
 
 # =========================
-# 📚 Documentation
+# Documentation
 # =========================
 docs/_build/
 .site
@@ -106,7 +109,7 @@ target/
 dmypy.json
 
 # =========================
-# 🧪 IDE / Editor Configs
+# IDE / Editor Configs
 # =========================
 .vscode/
 .idea/
@@ -115,43 +118,39 @@ dmypy.json
 .ropeproject
 
 # =========================
-# 📓 Jupyter / IPython
+# Jupyter / IPython
 # =========================
 .ipynb_checkpoints
 profile_default/
 ipython_config.py
 
 # =========================
-# 🔧 pyenv / Poetry / Pipenv / PDM / UV
+# pyenv / Poetry / Pipenv / PDM / UV
 # =========================
 .python-version
-# Pipfile.lock
-# poetry.lock
-# pdm.lock
 .pdm.toml
-# uv.lock
 
 # =========================
-# 🧵 Celery
+# Celery
 # =========================
 celerybeat-schedule
 celerybeat.pid
 
 # =========================
-# 🧠 AI Editors / Tools
+# AI Editors / Tools
 # =========================
 .abstra/
 .cursorignore
 .cursorindexingignore
 
 # =========================
-# 🔐 Private / Config Files
+# Private / Config Files
 # =========================
 .pypirc
 *.code-workspace
 
 # =========================
-# 🧾 user-specific files
+# user-specific files
 # =========================
 gitingest.txt
 *info/
@@ -187,12 +186,15 @@ yarn-error.log*
 .pnpm-store/
 dist/
 build/
+
 # Env files
 .env
 .env.*
+
 # IDE
 .vscode/
 .idea/
+
 # OS
 .DS_Store
 Thumbs.db
@@ -218,23 +220,25 @@ def create_gitignore(root_dir: Union[str, Path], preset: str = "python", *, forc
     Create or update a .gitignore file safely.
 
     Args:
-        root_dir: Target directory (str or Path).
-        preset: One of PRESETS keys ("python", "node", "django").
-        force: Overwrite if exists (creates .bak).
+        root_dir (Union[str, Path]): Target directory where the .gitignore will be created.
+        preset (str): One of the PRESETS keys ("python", "node", "django").
+        force (bool): Overwrite the file if it already exists (creates backup).
 
     Returns:
-        str: "written" | "exists" (from write_file).
+        str: Status returned by `write_file`, such as "written" or "exists".
     """
     path = Path(root_dir) / ".gitignore"
     key = preset.lower().strip()
     if key not in PRESETS:
         print(f"[gitignore] Unknown preset '{preset}', falling back to 'python'. Available: {', '.join(PRESETS)}")
         key = "python"
-    content = PRESETS[key]
 
+    content = PRESETS[key]
     state = write_file(path, content, force=force, backup=True)
+
     if state == "exists":
         print(".gitignore already exists. Use --force to overwrite.")
     else:
         print(f".gitignore created/updated with preset: {key}")
+
     return state

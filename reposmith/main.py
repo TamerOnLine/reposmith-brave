@@ -1,11 +1,15 @@
 """
 Thin entry point delegating to the real CLI in reposmith/cli.py
 """
+
 from .cli import main as _cli_main
 
 __all__ = ["main"]
 
-def main():
+def main() -> None:
+    """
+    Delegated entry point that calls the main function from reposmith.cli.
+    """
     _cli_main()
 
 if __name__ == "__main__":

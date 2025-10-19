@@ -1,4 +1,3 @@
-# reposmith/console.py
 from __future__ import annotations
 
 import io
@@ -7,11 +6,17 @@ import os
 import sys
 from typing import TextIO
 
-
 def _try_reconfigure(stream: TextIO, *, encoding: str = "utf-8", errors: str = "replace") -> bool:
     """
-    جرّب إعادة تهيئة كائن TextIO الحالي بترميز جديد (Python 3.7+).
-    يعيد True إن نجح، وإلا False.
+    Try to reconfigure a TextIO stream with a new encoding (Python 3.7+).
+
+    Args:
+        stream (TextIO): Stream to reconfigure (e.g., sys.stdout).
+        encoding (str): Encoding to apply. Default is 'utf-8'.
+        errors (str): Error handling mode. Default is 'replace'.
+
+    Returns:
+        bool: True if reconfiguration was successful, False otherwise.
     """
     if hasattr(stream, "reconfigure"):
         try:
@@ -21,11 +26,17 @@ def _try_reconfigure(stream: TextIO, *, encoding: str = "utf-8", errors: str = "
             return False
     return False
 
-
 def _wrap_buffer(stream: TextIO, *, encoding: str = "utf-8", errors: str = "replace") -> bool:
     """
-    إذا فشلت reconfigure أو لم تكن متاحة، لفّ الـ buffer بـ TextIOWrapper
-    مع الترميز المطلوب، ثم استبدِل sys.stdout/sys.stderr.
+    Wrap the buffer of a TextIO stream with a TextIOWrapper if reconfigure is unavailable.
+
+    Args:
+        stream (TextIO): Stream to wrap (e.g., sys.stdout).
+        encoding (str): Encoding to apply. Default is 'utf-8'.
+        errors (str): Error handling mode. Default is 'replace'.
+
+    Returns:
+        bool: True if wrapping was successful, False otherwise.
     """
     buf = getattr(stream, "buffer", None)
     if buf is None:
@@ -42,11 +53,12 @@ def _wrap_buffer(stream: TextIO, *, encoding: str = "utf-8", errors: str = "repl
     except Exception:
         return False
 
-
 def enable_utf8_console() -> bool:
     """
-    يضمن أن stdout/stderr لن ينهارا عند وجود رموز غير مدعومة (مثل الإيموجي).
-    يفضّل UTF-8 ويهبط إلى 'replace' بدل UnicodeEncodeError.
+    Ensure stdout and stderr support UTF-8 encoding without crashing on unsupported symbols.
+
+    Returns:
+        bool: True if both stdout and stderr were updated successfully.
     """
     preferred = (locale.getpreferredencoding(False) or "").lower()
     target_enc = "utf-8" if "utf" in preferred else (os.environ.get("PYTHONIOENCODING") or "utf-8")
@@ -58,10 +70,15 @@ def enable_utf8_console() -> bool:
 
     return ok_out and ok_err
 
-
 def sanitize_text(s: str) -> str:
     """
-    يضمن قابلية الطباعة على الترميز الحالي دون رمي UnicodeEncodeError.
+    Ensure text is printable on the current encoding without raising UnicodeEncodeError.
+
+    Args:
+        s (str): Input string to sanitize.
+
+    Returns:
+        str: Safe-to-print string using current stdout encoding.
     """
     enc = getattr(sys.stdout, "encoding", None) or locale.getpreferredencoding(False) or "utf-8"
     try:
@@ -70,12 +87,15 @@ def sanitize_text(s: str) -> str:
     except UnicodeEncodeError:
         return s.encode(enc, errors="replace").decode(enc, errors="replace")
 
-
 def maybe_strip_emoji(s: str) -> str:
     """
-    يسمح بتعطيل الإيموجي عبر:
-      - متغيّر البيئة REPOSMITH_NO_EMOJI=1
-    الفكرة: إن طُلِب ذلك، نحافظ على ASCII قدر الإمكان.
+    Optionally remove emojis from a string based on the REPOSMITH_NO_EMOJI environment variable.
+
+    Args:
+        s (str): Input string potentially containing emojis.
+
+    Returns:
+        str: Modified string with emojis replaced if REPOSMITH_NO_EMOJI=1.
     """
     if os.environ.get("REPOSMITH_NO_EMOJI") == "1":
         return s.encode("ascii", "replace").decode("ascii")

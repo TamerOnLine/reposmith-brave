@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-from pathlib import Path
 import json
+from pathlib import Path
 
 # ---------------------------------------------------------------------------
-# PowerShell script: launch_brave.ps1 (with port labels)
+# Embedded PowerShell scripts and default configuration content
 # ---------------------------------------------------------------------------
 
 LAUNCH_BRAVE_PS1 = r'''
@@ -49,7 +49,6 @@ function Test-PortOpen {
   }
 }
 
-# Port labels for nicer display
 $PORT_LABELS = @{
   3000 = "Next.js / React"
   5173 = "Vite"
@@ -80,7 +79,6 @@ function Format-UrlWithLabel {
 }
 
 function Detect-OpenDevPorts {
-  # Default common dev ports
   $default = @(3000,5173,8000,8080,5000,4200,5500,7000,9000,8001,8002,8888)
   $extra = @()
   if ($Ports) {
@@ -140,13 +138,10 @@ function Pick-UrlsInteractive {
 
   $picked = foreach ($ix in $indices) {
     $raw = $choices[$ix] -replace '^\[(RUNNING|CONF)\]\s+',''
-    # remove label when returning the actual URL
     $raw -replace '\s—\s.*$',''
   }
   return $picked | Select-Object -Unique
 }
-
-# ---- Main ------------------------------------------------------------------
 
 $brave = Resolve-Brave
 $profilePath = Join-Path (Get-Location) $ProfileDir
@@ -165,7 +160,7 @@ else {
   $urlsToOpen = Pick-UrlsInteractive -OpenUrls $urlsRunning -FromConf $urlsConf
 }
 
-$argList = @("--user-data-dir=""$profilePath""")
+$argList = @("--user-data-dir=\"$profilePath\"")
 foreach ($u in $urlsToOpen) { $argList += @("--new-tab", $u) }
 
 Start-Process -FilePath $brave -ArgumentList $argList
@@ -176,10 +171,6 @@ if ($urlsToOpen.Count -gt 0) {
   Write-Host "No tabs opened (profile only). Use -Auto or add URLs to .brave-profile.conf" -ForegroundColor Yellow
 }
 '''
-
-# ---------------------------------------------------------------------------
-# PowerShell script: make_brave_shortcut.ps1
-# ---------------------------------------------------------------------------
 
 MAKE_SHORTCUT_PS1 = r'''
 param(
@@ -203,10 +194,6 @@ $Shortcut.Save()
 Write-Host "Shortcut created on Desktop."
 '''
 
-# ---------------------------------------------------------------------------
-# PowerShell script: cleanup_brave_profile.ps1
-# ---------------------------------------------------------------------------
-
 CLEANUP_PS1 = r'''
 param([string]$ProfileDir = ".brave-profile")
 $path = Join-Path (Get-Location) $ProfileDir
@@ -217,10 +204,6 @@ if (Test-Path $path) {
   Write-Host "Nothing to remove at $path"
 }
 '''
-
-# ---------------------------------------------------------------------------
-# Default config for .brave-profile.conf
-# ---------------------------------------------------------------------------
 
 DEFAULT_CONF = """# Lines starting with # are ignored.
 # Put any URLs you want Brave to open with this project profile, one per line.
@@ -235,12 +218,15 @@ DEFAULT_CONF = """# Lines starting with # are ignored.
 # ---------------------------------------------------------------------------
 
 def init_brave_profile(root: Path) -> None:
-    """Scaffold per-project Brave profile + tools into `root`."""
+    """Scaffold per-project Brave profile and tools into the specified root directory.
+
+    Args:
+        root (Path): The project root directory to initialize.
+    """
     root = Path(root)
     tools = root / "tools"
     tools.mkdir(parents=True, exist_ok=True)
 
-    # .brave-profile folder + minimal prefs/readme
     prof = root / ".brave-profile"
     prof.mkdir(exist_ok=True)
 
@@ -254,17 +240,18 @@ def init_brave_profile(root: Path) -> None:
         encoding="utf-8"
     )
 
-    # dynamic config for tabs
     (root / ".brave-profile.conf").write_text(DEFAULT_CONF, encoding="utf-8")
 
-    # tools scripts
     (tools / "launch_brave.ps1").write_text(LAUNCH_BRAVE_PS1.lstrip(), encoding="utf-8")
     (tools / "make_brave_shortcut.ps1").write_text(MAKE_SHORTCUT_PS1.lstrip(), encoding="utf-8")
     (tools / "cleanup_brave_profile.ps1").write_text(CLEANUP_PS1.lstrip(), encoding="utf-8")
 
-
 def add_vscode_task(root: Path) -> None:
-    """Append VS Code tasks that run launch_brave.ps1 in various modes."""
+    """Append Brave-related launch tasks to VS Code tasks.json configuration.
+
+    Args:
+        root (Path): The root directory of the project.
+    """
     vscode = root / ".vscode"
     vscode.mkdir(exist_ok=True)
     tasks = vscode / "tasks.json"
@@ -312,11 +299,13 @@ def add_vscode_task(root: Path) -> None:
 
     tasks.write_text(json.dumps(task_obj, indent=2), encoding="utf-8")
 
-
 def setup_brave(root: Path) -> None:
-    """Public entry used by CLI to provision Brave integration."""
+    """Set up Brave profile integration including tools and VS Code tasks.
+
+    Args:
+        root (Path): The root directory to configure.
+    """
     init_brave_profile(root)
     add_vscode_task(root)
-
 
 __all__ = ["setup_brave", "init_brave_profile", "add_vscode_task"]
