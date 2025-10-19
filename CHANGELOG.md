@@ -5,6 +5,42 @@ This project follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.3.3] - 2025-10-19
+### Added
+- Full `--with-brave` integration in CLI.
+- VS Code generator now includes `tasks.json`.
+- Logging system redesigned with colorized console output.
+
+### Fixed
+- Compatibility on Windows paths and uv environments.
+
+---
+
+## [0.3.2] - 2025-10-15
+### Added
+- Automatic GitHub Actions CI generator (`.github/workflows/unit-tests.yml`).
+- Safer environment detection for Python 3.13+.
+
+---
+
+## [0.3.1] - 2025-10-10
+### Changed
+- Improved structure of `serve-manager` and portable setup.py entry.
+- Refined internal path handling via `__file__` + `os.path`.
+
+---
+
+## [0.3.0] - 2025-10-05
+### Added
+- Major refactor to modular utilities:
+  - `logging_utils`, `venv_utils`, `brave_profile`, `vscode_utils`.
+- New CLI commands:
+  ```bash
+  reposmith init
+  reposmith brave-profile --init
+
+---
+
 ## [0.2.10] - 2025-09-07
 ### Added
 - New `on/` helper package in repo root to allow shorter execution:
