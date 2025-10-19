@@ -23,8 +23,8 @@ def post_init_dependency_setup(root: Path, prefer_uv: bool = True) -> None:
         - If no Python interpreter is found in the .venv directory, the function waits briefly and rechecks.
         - Exceptions during uv operations fall back to using pip.
     """
-    venv_dir = root / ".venv"
-    py = venv_python(venv_dir)
+    
+    py = venv_python(root)
 
     # ⏳ أضف انتظارًا قصيرًا بعد إنشاء البيئة لتفادي فشل الكشف في ويندوز
     if not py.exists():
