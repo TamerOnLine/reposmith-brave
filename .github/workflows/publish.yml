@@ -3,7 +3,7 @@ name: Publish to PyPI
 on:
   push:
     tags:
-      - "v*.*.*"   # runs whenever you push a tag like v0.3.4
+      - "v*.*.*"   # Runs when pushing tags like v0.3.4
 
 jobs:
   publish:
@@ -18,25 +18,21 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Install build deps
+      - name: Install build dependencies
         run: |
           python -m pip install --upgrade pip
           python -m pip install tomli build
 
       - name: Verify CHANGELOG has current version
-        shell: bash
         run: |
-          PYVER=$(python - <<'PY'
-          import tomllib
-          with open("pyproject.toml","rb") as f:
-              data = tomllib.loads(f.read())
-          print(data.get("project", {}).get("version", ""))
-          PY
-          )
+          PYVER=$(python -c "import tomllib; data=tomllib.loads(open('pyproject.toml','rb').read()); print(data.get('project', {}).get('version', ''))")
           echo "🔍 Checking for version: $PYVER in CHANGELOG.md"
-          grep -q "\[\s*$PYVER\s*\]" CHANGELOG.md || (echo "❌ CHANGELOG does not include $PYVER" && exit 1)
+          if ! grep -q "\[\s*$PYVER\s*\]" CHANGELOG.md; then
+            echo "❌ CHANGELOG does not include $PYVER"
+            exit 1
+          fi
 
-      - name: Build package (sdist + wheel)
+      - name: Build package
         run: |
           python -m build
 
@@ -44,4 +40,3 @@ jobs:
         uses: pypa/gh-action-pypi-publish@v1.12.2
         with:
           password: ${{ secrets.PYPI_API_TOKEN }}
-          # repository-url: https://test.pypi.org/legacy/   # uncomment to publish to TestPyPI
