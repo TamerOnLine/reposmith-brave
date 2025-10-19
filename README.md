@@ -139,4 +139,3 @@ Licensed under [MIT](LICENSE) © 2025 **Tamer Hamad Faour (@TamerOnLine)**
 - 💖 [Support via GitHub Sponsors](https://github.com/sponsors/TamerOnLine)  
 - 📧 info@tameronline.com  
 
----
