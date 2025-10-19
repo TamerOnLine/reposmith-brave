@@ -30,8 +30,7 @@ SOFTWARE.
 """
 
 def _write_text_ascii_safe(path: Path, text: str) -> None:
-    """
-    Write the given text to a file using UTF-8 encoding.
+    """Write the given text to a file using UTF-8 encoding.
 
     Args:
         path (Path): The file path where the text will be written.
@@ -45,8 +44,7 @@ def create_license(
     owner_name: str = "Tamer",
     force: bool = False,
 ) -> Path:
-    """
-    Create a LICENSE file in the specified directory.
+    """Create a LICENSE file in the specified directory.
 
     Args:
         root (Path): The root directory where the LICENSE file will be created.
@@ -87,5 +85,4 @@ def create_license(
     _write_text_ascii_safe(license_path, text)
 
     print(f"LICENSE file created for {owner_name} ({license_type}).")
-
     return license_path

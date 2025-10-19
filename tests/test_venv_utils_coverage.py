@@ -6,16 +6,20 @@ import pytest
 
 
 def test_create_venv_invokes_subprocess(monkeypatch):
+    """Test that create_venv triggers a subprocess call."""
     try:
         import reposmith.venv_utils as vu
     except Exception:
-        pytest.skip("venv_utils غير متاح")
+        pytest.skip("venv_utils not available")
 
     calls = []
 
     def fake_run(cmd, *a, **k):
         calls.append((tuple(cmd), k))
-        class R: returncode = 0
+
+        class R:
+            returncode = 0
+
         return R()
 
     monkeypatch.setattr("subprocess.run", fake_run, raising=True)
@@ -23,7 +27,7 @@ def test_create_venv_invokes_subprocess(monkeypatch):
     with tempfile.TemporaryDirectory() as td:
         root = Path(td)
         if not hasattr(vu, "create_venv"):
-            pytest.skip("create_venv غير متاح")
+            pytest.skip("create_venv not available")
         try:
             vu.create_venv(root)
         except TypeError:
@@ -33,23 +37,23 @@ def test_create_venv_invokes_subprocess(monkeypatch):
 
 
 def test_install_requirements_paths(monkeypatch, capsys):
-    """
-    يغطي مسارات عدم وجود requirements.txt ووجوده (فارغ)،
-    مع تكيّف لتواقيع دالة install_requirements المختلفة.
-    """
+    """Covers install_requirements when requirements.txt is missing or empty."""
     try:
         import reposmith.venv_utils as vu
     except Exception:
-        pytest.skip("venv_utils غير متاح")
+        pytest.skip("venv_utils not available")
 
     if not hasattr(vu, "install_requirements"):
-        pytest.skip("install_requirements غير متاح")
+        pytest.skip("install_requirements not available")
 
     calls = []
 
     def fake_run(cmd, *a, **k):
         calls.append((tuple(cmd), k))
-        class R: returncode = 0
+
+        class R:
+            returncode = 0
+
         return R()
 
     monkeypatch.setattr("subprocess.run", fake_run, raising=True)
@@ -57,60 +61,46 @@ def test_install_requirements_paths(monkeypatch, capsys):
     with tempfile.TemporaryDirectory() as td:
         root = Path(td)
 
-        # 1) بدون requirements.txt
+        # Case 1: No requirements.txt
         called = False
         try:
-            # توقيع بدون python_exe
             vu.install_requirements(root)
             called = True
         except TypeError:
-            # جرّب وسائط بديلة شائعة
-            tried = False
             for kw in ("python", "python_path", "py_exe", "interpreter", "exe", "python_exe"):
                 try:
                     vu.install_requirements(root, **{kw: sys.executable})
-                    tried = True
                     called = True
                     break
                 except TypeError:
                     continue
-            if not tried:
-                # آخر محاولة: positional
+            if not called:
                 try:
                     vu.install_requirements(root, sys.executable)  # type: ignore[arg-type]
                     called = True
                 except TypeError:
                     pass
         if not called:
-            pytest.skip("install_requirements لا يقبل أيًا من التواقيع المتوقعة")
+            pytest.skip("install_requirements doesn't accept any known signature")
 
-        out, err = capsys.readouterr()
+        _ = capsys.readouterr()
 
-        # 2) مع ملف requirements.txt فارغ
+        # Case 2: Empty requirements.txt
         (root / "requirements.txt").write_text("", encoding="utf-8")
-        # أعد نفس الاستدعاء بالتوقيع الذي نجح للتو
-        if "install_requirements(root)" in out:
-            vu.install_requirements(root)
-        else:
-            # جرّب بنفس ترتيب المحاولات السابق
-            ok = False
-            try:
-                vu.install_requirements(root)
-                ok = True
-            except TypeError:
-                for kw in ("python", "python_path", "py_exe", "interpreter", "exe", "python_exe"):
-                    try:
-                        vu.install_requirements(root, **{kw: sys.executable})
-                        ok = True
-                        break
-                    except TypeError:
-                        continue
-                if not ok:
-                    try:
-                        vu.install_requirements(root, sys.executable)  # type: ignore[arg-type]
-                        ok = True
-                    except TypeError:
-                        pass
 
-        # لا نُلزم وجود استدعاءات pip لأن الملف فارغ؛ يكفينا أن الاختبار مرّ دون انهيار
+        try:
+            vu.install_requirements(root)
+        except TypeError:
+            for kw in ("python", "python_path", "py_exe", "interpreter", "exe", "python_exe"):
+                try:
+                    vu.install_requirements(root, **{kw: sys.executable})
+                    break
+                except TypeError:
+                    continue
+            else:
+                try:
+                    vu.install_requirements(root, sys.executable)  # type: ignore[arg-type]
+                except TypeError:
+                    pass
+
         assert isinstance(calls, list)

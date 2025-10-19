@@ -1,7 +1,6 @@
+# reposmith/file_utils.py
 from __future__ import annotations
-
 from pathlib import Path
-
 from .core.fs import write_file
 
 DEFAULT_REQUIREMENTS = "# Add your dependencies here\n"
@@ -9,6 +8,7 @@ DEFAULT_APP_CONTENT = (
     'print("Welcome! This is your entry file.")\n'
     'print("You can now start writing your application code here.")\n'
 )
+
 
 def create_requirements_file(path: Path, *, force: bool = False) -> str:
     """
@@ -32,6 +32,7 @@ def create_requirements_file(path: Path, *, force: bool = False) -> str:
         - Requires `write_file` to be defined in `.core.fs`.
     """
     return write_file(path, DEFAULT_REQUIREMENTS, force=force, backup=True)
+
 
 def create_app_file(
     path: Path, *, force: bool = False, content: str | None = None

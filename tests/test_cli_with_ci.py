@@ -7,6 +7,14 @@ import inspect
 import pytest
 
 def _help_text_for(subcmd: str) -> str:
+    """Return the help text for a specific CLI subcommand.
+
+    Args:
+        subcmd (str): The subcommand to retrieve help for.
+
+    Returns:
+        str: The help message text for the subcommand.
+    """
     proc = subprocess.run(
         [sys.executable, "-m", "reposmith.main", subcmd, "--help"],
         stdout=subprocess.PIPE,
@@ -17,11 +25,31 @@ def _help_text_for(subcmd: str) -> str:
     return proc.stdout or ""
 
 def _is_flag_supported(help_text: str, flag: str) -> bool:
+    """Check if a specific flag is present in the help text.
+
+    Args:
+        help_text (str): The CLI help message.
+        flag (str): The flag to search for.
+
+    Returns:
+        bool: True if the flag is supported, False otherwise.
+    """
     pat = r"(?:^|\s)" + re.escape(flag) + r"(?:\s|,|$)"
     return re.search(pat, help_text) is not None
 
 class TestCLISmokeWithCI:
+    """Smoke tests for the CI-related functionality in reposmith CLI."""
+
     def _run(self, args, cwd: Path):
+        """Run a CLI command with given arguments and working directory.
+
+        Args:
+            args (list): Arguments to pass to the CLI.
+            cwd (Path): Directory to run the command in.
+
+        Returns:
+            CompletedProcess: Result of subprocess.run.
+        """
         return subprocess.run(
             [sys.executable, "-m", "reposmith.main"] + args,
             cwd=cwd,
@@ -29,11 +57,7 @@ class TestCLISmokeWithCI:
         )
 
     def test_ci_adaptive(self):
-        """
-        إن كان CLI يدعم --with-ci/--ci-python: نولّد workflow عبر CLI.
-        إن لم يدعم: نستدعي ensure_github_actions_workflow مباشرةً، مع تكييف الوسائط بحسب التوقيع.
-        وإن لم توجد دالة CI نهائياً، نكتفي بأن init لا ينهار.
-        """
+        """Test that CI workflow can be generated either via CLI or via utility function fallback."""
         with tempfile.TemporaryDirectory() as td:
             proj = Path(td) / "proj"
             proj.mkdir(parents=True, exist_ok=True)
@@ -51,43 +75,29 @@ class TestCLISmokeWithCI:
                 self._run(args, cwd=proj)
                 assert ci_file.exists(), "Expected CI workflow to be generated via CLI."
             else:
-                # لا يوجد علم --with-ci؛ نحاول الدالة الداخلية
                 try:
                     from reposmith.ci_utils import ensure_github_actions_workflow
                 except Exception:
-                    # لا ميزات CI؛ فقط تأكد أن init لا ينهار
                     self._run(["init"], cwd=proj)
                     return
 
                 sig = inspect.signature(ensure_github_actions_workflow)
                 params = sig.parameters
 
-                # نبني وسائط الاستدعاء بحسب التوقيع
                 call_kwargs = {}
                 call_args = [proj]
 
-                # إذا الدالة تدعم اسم وسيط لـ python version بأي اسم مألوف
-                # جرّب أسماء شائعة: python_version, version, py, python
                 for name in ("python_version", "version", "py", "python"):
                     if name in params:
                         call_kwargs[name] = "3.12"
                         break
-                else:
-                    # لا يوجد وسيط خاص بالنسخة؟ لا مشكلة — نمرّر root فقط.
-                    pass
 
-                # إن كان التوقيع positional-only لوسيط النسخة (نادر)
-                # نضيفه positional إذا عدد البراميتر > 1 ولا يوجد **kwargs
                 if not call_kwargs and len(params) > 1:
-                    # إن كان المعامل الثاني ليس لديه default ويبدو positional
                     try:
-                        # جرّب تمرير "3.12" كوسيط ثاني
                         ensure_github_actions_workflow(proj, "3.12")
                     except TypeError:
-                        # fallback: بدون النسخة
                         ensure_github_actions_workflow(proj)
                     else:
-                        # تم بنجاح — تحقّق من الملف وارجع
                         assert ci_file.exists()
                         return
                 else:

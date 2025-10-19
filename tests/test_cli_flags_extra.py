@@ -1,15 +1,34 @@
-import os, sys, tempfile
+import os
+import sys
+import tempfile
 from pathlib import Path
 import pytest
 
 def _has_flag(help_text: str, flag: str) -> bool:
+    """Check if a specific flag exists in the CLI help text.
+
+    Args:
+        help_text (str): The CLI help message.
+        flag (str): The flag to check for.
+
+    Returns:
+        bool: True if the flag is found, False otherwise.
+    """
     return flag in help_text
 
 def test_cli_init_with_supported_flags(monkeypatch):
+    """Test the 'init' CLI command with all supported optional flags.
+
+    Args:
+        monkeypatch: pytest fixture to patch sys.argv.
+
+    Notes:
+        This test dynamically adapts to available flags in the CLI help.
+    """
     try:
         from reposmith.cli import build_parser, main as cli_main
     except Exception:
-        pytest.skip("CLI غير متاح")
+        pytest.skip("CLI not available")
 
     parser = build_parser()
     help_text = parser.format_help()
@@ -45,5 +64,4 @@ def test_cli_init_with_supported_flags(monkeypatch):
         finally:
             os.chdir(prev)
 
-        # لا نُلزم وجود ملفات بعينها — الهدف تغطية مسارات الأعلام
         assert proj.exists()

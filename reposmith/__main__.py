@@ -1,11 +1,17 @@
+# -*- coding: utf-8 -*-
 """
-Entry point script for running the reposmith module as a script.
-
-This module allows execution using the `python -m reposmith` command.
+Entry point for `python -m reposmith`.
+Delegates to the same unified CLI as other entry points.
 """
 
-from . import main
+from __future__ import annotations
+
+from .cli import main as cli_main
+
+
+def main() -> int | None:
+    return cli_main()
 
 
 if __name__ == "__main__":
-    main.main()
+    raise SystemExit(main() or 0)

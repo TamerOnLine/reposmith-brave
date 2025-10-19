@@ -1,16 +1,17 @@
+# -*- coding: utf-8 -*-
 """
-Thin entry point delegating to the real CLI in reposmith/cli.py
+Thin wrapper for `python -m reposmith.main`.
+Always delegate to the unified CLI implemented in `reposmith.cli`.
 """
 
-from .cli import main as _cli_main
+from __future__ import annotations
 
-__all__ = ["main"]
+from .cli import main as cli_main
 
-def main() -> None:
-    """
-    Delegated entry point that calls the main function from reposmith.cli.
-    """
-    _cli_main()
+
+def main() -> int | None:
+    return cli_main()
+
 
 if __name__ == "__main__":
-    _cli_main()
+    raise SystemExit(main() or 0)

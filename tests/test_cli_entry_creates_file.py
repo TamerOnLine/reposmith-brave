@@ -1,23 +1,39 @@
-import os, sys, tempfile
+import os
+import sys
+import tempfile
 from pathlib import Path
 import pytest
 
+
 def _has_flag(help_text: str, flag: str) -> bool:
+    """Return True if the flag appears in the CLI help text."""
     return flag in help_text
 
+
 def test_cli_init_with_entry_creates_file(monkeypatch):
+    """
+    Verify that `reposmith init` creates the specified entry file.
+
+    The test prefers `--entry` if available; if not, it falls back to
+    `--main-file` (deprecated alias), otherwise it skips.
+    """
     try:
         from reposmith.cli import build_parser, main as cli_main
     except Exception:
-        pytest.skip("CLI غير متاح")
+        pytest.skip("CLI not available")
 
     parser = build_parser()
     help_text = parser.format_help()
-    if not _has_flag(help_text, "--entry"):
-        pytest.skip("--entry غير مدعوم")
 
-    args = ["reposmith", "init", "--entry", "run.py"]
-    # لو عندك --no-venv خلّيه أسرع
+    args = ["reposmith", "init"]
+    if _has_flag(help_text, "--entry"):
+        args += ["--entry", "run.py"]
+    elif _has_flag(help_text, "--main-file"):
+        args += ["--main-file", "run.py"]
+    else:
+        pytest.skip("No supported flag to set entry file")
+
+    # Use --no-venv if supported to speed up the test
     if _has_flag(help_text, "--no-venv"):
         args.append("--no-venv")
 
@@ -36,5 +52,4 @@ def test_cli_init_with_entry_creates_file(monkeypatch):
         finally:
             os.chdir(prev)
 
-        # نتحقق أن run.py اتأنشأ
         assert (proj / "run.py").exists()
