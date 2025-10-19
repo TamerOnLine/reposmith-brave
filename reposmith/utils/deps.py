@@ -1,5 +1,5 @@
 from __future__ import annotations
-import subprocess, os
+import subprocess, os, time
 from pathlib import Path
 from .paths import venv_python
 
@@ -20,12 +20,16 @@ def post_init_dependency_setup(root: Path, prefer_uv: bool = True) -> None:
         None
 
     Notes:
-        - If no Python interpreter is found in the .venv directory, the function exits early.
+        - If no Python interpreter is found in the .venv directory, the function waits briefly and rechecks.
         - Exceptions during uv operations fall back to using pip.
     """
     venv_dir = root / ".venv"
     py = venv_python(venv_dir)
-    
+
+    # ⏳ أضف انتظارًا قصيرًا بعد إنشاء البيئة لتفادي فشل الكشف في ويندوز
+    if not py.exists():
+        time.sleep(1.5)
+
     if not py.exists():
         print("[INFO] No Python interpreter in .venv — skipping dependency setup.")
         return
@@ -37,6 +41,7 @@ def post_init_dependency_setup(root: Path, prefer_uv: bool = True) -> None:
         print(">", " ".join(cmd))
         subprocess.run(cmd, cwd=root, check=True)
 
+    # ✅ حالة وجود requirements.txt
     if req.exists() and req.stat().st_size > 0:
         if prefer_uv:
             print("[uv] requirements.txt detected → installing via uv...")
@@ -51,6 +56,7 @@ def post_init_dependency_setup(root: Path, prefer_uv: bool = True) -> None:
         run([str(py), "-m", "pip", "install", "-r", str(req)])
         return
 
+    # ✅ حالة عدم وجود requirements.txt
     if prefer_uv:
         print("[check] Ensuring uv is available inside the venv...")
         rc = subprocess.run(
@@ -68,6 +74,7 @@ def post_init_dependency_setup(root: Path, prefer_uv: bool = True) -> None:
             print("[uv] No requirements.txt found → initializing pyproject.toml via uv init...")
             try:
                 run([str(py), "-m", "uv", "init"])
+                print("[DONE] pyproject.toml created successfully ✅")
             except Exception as e:
                 print(f"[WARN] uv init failed: {e}")
         else:
