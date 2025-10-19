@@ -5,6 +5,18 @@ This project follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.3.8] - 2025-10-20
+### Added
+- 
+
+### Changed
+- 
+
+### Fixed
+- 
+
+---
+
 ## [0.3.7] - 2025-10-19
 ### Added
 - Main branch ruleset (block force-push, require PR & checks).
