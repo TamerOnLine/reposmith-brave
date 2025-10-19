@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "reposmith-tol"
-version = "0.3.7"
+version = "0.3.8"
 description = "Portable Python project bootstrapper with venv, uv, Brave profile, VS Code, and CI integration."
 readme = "README.md"
 requires-python = ">=3.12"
