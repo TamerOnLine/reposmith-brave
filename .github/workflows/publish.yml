@@ -1,0 +1,220 @@
+name: Publish (with Changelog Guard)
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'          # Trigger when pushing tags like v0.3.4
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Build only (no publish)'
+        required: false
+        default: 'false'
+      tag:
+        description: 'Optional tag to release (e.g., v0.3.4). Leave empty to skip.'
+        required: false
+        default: ''
+
+concurrency:
+  group: publish-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+  id-token: write
+  actions: read
+
+env:
+  PY_VER: '3.12'
+
+jobs:
+  # ========================================
+  # 1) CHANGELOG GUARD
+  # ========================================
+  changelog_guard:
+    name: Changelog Guard
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ env.PY_VER }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PY_VER }}
+
+      - name: Read version from pyproject.toml
+        id: ver
+        run: |
+          python - << 'PY'
+          import pathlib, sys
+          try:
+              import tomllib
+          except ModuleNotFoundError:
+              import tomli as tomllib
+
+          py = pathlib.Path("pyproject.toml")
+          if not py.exists():
+              print("::error::pyproject.toml not found")
+              sys.exit(1)
+
+          with py.open("rb") as fp:
+              d = tomllib.load(fp)
+
+          v = d.get("project", {}).get("version") or d.get("tool", {}).get("poetry", {}).get("version")
+          if not v:
+              print("::error::No version found in pyproject.toml")
+              sys.exit(1)
+
+          print(f"version={v}")
+          print(f"::set-output name=version::{v}")
+          PY
+
+      - name: Ensure tag (if push) matches pyproject version
+        if: github.event_name == 'push'
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          VER="${{ steps.ver.outputs.version }}"
+          if [ "$TAG" != "v${VER}" ]; then
+            echo "::error::Tag ($TAG) does not match pyproject version (v${VER})"
+            exit 1
+          fi
+          echo "✓ Tag matches version"
+
+      - name: Verify CHANGELOG contains current version
+        run: |
+          VER="${{ steps.ver.outputs.version }}"
+          echo "Checking CHANGELOG for [$VER] ..."
+          test -f CHANGELOG.md || { echo "::error::CHANGELOG.md is missing"; exit 1; }
+          grep -E "^## \[\s*${VER}\s*\]" CHANGELOG.md >/dev/null || { echo "::error::CHANGELOG missing entry for ${VER}"; exit 1; }
+          echo "✓ CHANGELOG contains [$VER]"
+
+      - name: Warn if Added/Changed/Fixed sections are all empty
+        continue-on-error: true
+        run: |
+          VER="${{ steps.ver.outputs.version }}"
+          awk -v ver="$VER" '
+            $0 ~ "^## \\[" ver "\\]" {in_block=1; next}
+            in_block && $0 ~ "^## \\[" {in_block=0}
+            in_block {print}
+          ' CHANGELOG.md > .ch_block.txt
+
+          if grep -q "### Added" .ch_block.txt && \
+             grep -q "### Changed" .ch_block.txt && \
+             grep -q "### Fixed" .ch_block.txt; then
+            lines=$(grep -E "^- " .ch_block.txt | wc -l | tr -d ' ')
+            if [ "$lines" -eq 0 ]; then
+              echo "::warning::CHANGELOG section for ${VER} seems empty (no bullet points)."
+            else
+              echo "✓ CHANGELOG has $lines bullet item(s)."
+            fi
+          fi
+
+  # ========================================
+  # 2) BUILD (via uv)
+  # ========================================
+  build:
+    name: Build (sdist + wheel)
+    needs: changelog_guard
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python ${{ env.PY_VER }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PY_VER }}
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v3
+
+      - name: Build with uv
+        run: |
+          uv build
+          ls -al dist
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/*
+
+  # ========================================
+  # 3) PUBLISH TO PYPI (with env)
+  # ========================================
+  publish_pypi:
+    name: Publish to PyPI
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+
+    # ✅ define env variable here (removes VS Code warning)
+    env:
+      PYPI_API_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
+
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist
+
+      - name: Publish via API token
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: dist
+          user: __token__
+          password: ${{ env.PYPI_API_TOKEN }}
+
+  # ========================================
+  # 4) GITHUB RELEASE
+  # ========================================
+  github_release:
+    name: Create GitHub Release
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist
+
+      - name: Extract current version
+        id: ver
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          echo "tag=${TAG}" >> $GITHUB_OUTPUT
+          echo "version=${TAG#v}" >> $GITHUB_OUTPUT
+
+      - name: Extract release notes from CHANGELOG
+        id: notes
+        shell: bash
+        run: |
+          VER="${{ steps.ver.outputs.version }}"
+          awk -v ver="$VER" '
+            $0 ~ "^## \\[" ver "\\]" {in_block=1; next}
+            in_block && $0 ~ "^## \\[" {in_block=0}
+            in_block {print}
+          ' CHANGELOG.md > RELEASE_NOTES.md
+
+          echo "-------- RELEASE NOTES --------"
+          cat RELEASE_NOTES.md || true
+          echo "--------------------------------"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.ver.outputs.tag }}
+          name: Release ${{ steps.ver.outputs.tag }}
+          body_path: RELEASE_NOTES.md
+          files: |
+            dist/*.whl
+            dist/*.tar.gz
