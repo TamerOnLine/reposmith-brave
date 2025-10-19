@@ -4,15 +4,18 @@ All notable changes to this project will be documented in this file.
 This project follows [Semantic Versioning](https://semver.org/).
 
 ---
+
 ## [0.3.4] - 2025-10-19
 ### Added
-- 
+- New **publish pipeline guard**: verifies Git tag matches `pyproject.toml` version and that `CHANGELOG.md` contains the current section; auto-extracts release notes. (see `.github/workflows/publish.yml`)
+- **uv-based build** in publish pipeline with artifacts upload and automated GitHub Release creation.
 
 ### Changed
-- 
+- CI/publish workflows refined for clearer release flow and VS Code warning removal by defining `PYPI_API_TOKEN` at the job `env` level.
 
 ### Fixed
-- 
+- More robust Windows CI logs by allowing emoji-free runs via `REPOSMITH_NO_EMOJI=1`.
+
 
 ---
 
