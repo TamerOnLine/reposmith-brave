@@ -1,139 +1,142 @@
-# ⚡ RepoSmith
+# ⚡ RepoSmith — Next-Gen Python Project Bootstrapper
 
-[![PyPI version](https://img.shields.io/pypi/v/reposmith-tol?style=flat-square)](https://pypi.org/project/reposmith-tol/)
+[![PyPI](https://img.shields.io/pypi/v/reposmith-tol?style=flat-square&logo=pypi)](https://pypi.org/project/reposmith-tol/)
 ![Python](https://img.shields.io/pypi/pyversions/reposmith-tol?style=flat-square)
-![License](https://img.shields.io/github/license/liebemama/RepoSmith?style=flat-square)
-![CI](https://img.shields.io/github/actions/workflow/status/liebemama/RepoSmith/ci.yml?branch=main&label=CI&logo=github&style=flat-square)
-![CodeQL](https://img.shields.io/github/actions/workflow/status/liebemama/RepoSmith/codeql.yml?branch=main&label=CodeQL&logo=github&style=flat-square)
-![Release](https://img.shields.io/github/actions/workflow/status/liebemama/RepoSmith/release.yml?branch=main&label=Release&logo=github&style=flat-square)
+![License](https://img.shields.io/github/license/TamerOnLine/RepoSmith?style=flat-square)
+![CI](https://img.shields.io/github/actions/workflow/status/TamerOnLine/RepoSmith/ci.yml?branch=main&label=CI&logo=github&style=flat-square)
 ![Downloads](https://img.shields.io/pypi/dm/reposmith-tol?style=flat-square)
-[![Sponsor](https://img.shields.io/badge/Sponsor-💖-pink?style=flat-square)](https://github.com/sponsors/liebemama)
+[![Sponsor](https://img.shields.io/badge/Sponsor-💖-pink?style=flat-square)](https://github.com/sponsors/TamerOnLine)
 
-> **RepoSmith** — A zero-dependency Python project bootstrapper that builds your environment, CI, and workspace in seconds.
+> **RepoSmith-tol** builds complete, ready-to-code Python projects —  
+> virtual env, dependencies with `uv`, VS Code setup, CI, and optional Brave Dev Profile — all in **one command**.
 
 ---
 
 ## ✨ Features
 
-- 🚀 **Zero dependencies** — built entirely on Python stdlib  
-- ⚙️ **Auto virtualenv** creation (`.venv`)  
-- 🧱 **Project scaffolding** — `requirements.txt`, entry file, `.gitignore`, `LICENSE`  
-- 💻 **VS Code config** — `settings.json`, `launch.json`, workspace auto-setup  
-- 🛡 **GitHub Actions** — generated `.github/workflows/ci.yml`  
-- 🔍 **Security Analysis** via integrated **CodeQL** workflow  
-- 🔧 **Idempotent** — re-runs safely, overwriting only when `--force`  
-- 📢 **Release automation** — automatic GitHub Releases on tagged versions  
-- 🧾 **Dependabot** — keeps CI and Python dependencies up-to-date
+| Category | What It Does |
+|-----------|--------------|
+| 🧱 **Scaffolding** | Generates `main.py`, `.gitignore`, `LICENSE`, and VS Code workspace automatically |
+| ⚙️ **Virtualenv** | Creates `.venv` and links it to VS Code |
+| ⚡ **Dependency Install** | Installs packages via **[`uv`](https://github.com/astral-sh/uv)** (10× faster than pip) |
+| 💻 **VS Code Integration** | Auto-creates `settings.json`, `launch.json`, and `tasks.json` |
+| 🧪 **CI Workflow** | Generates `.github/workflows/ci.yml` for tests & linting |
+| 🦁 **Brave Browser Profile** | Per-project isolated Brave Dev Profile (`.brave-profile/` + PowerShell tools) |
+| 🔒 **Idempotent & Safe** | Re-runs cleanly, only overwriting with `--force` |
+| 🧾 **License Automation** | Adds MIT license with owner/year metadata |
+| 🧰 **Cross-Platform** | Works on Windows / Linux / macOS |
 
 ---
 
 ## ⚡ Quick Start
 
-### 🧭 Option 1 — Run as Python module
-```powershell
-py -m reposmith init --entry run.py --with-vscode --with-ci
-```
-
-### 🧰 Option 2 — Use CLI (if installed in PATH)
-```powershell
-reposmith init --entry run.py --with-vscode --with-ci
-```
-
-### 🧩 Option 3 — Use the `on/` helper package
-```powershell
-py -m on init        # same as: py -m reposmith init
-py -m on info        # show environment info
-py -m on init -i     # interactive mode
-```
-
----
-
-## ⚙️ CLI Options
-
-| Flag | Description |
-|------|--------------|
-| `--force` | Overwrite existing files (creates `.bak` backups) |
-| `--no-venv` | Skip virtual environment creation |
-| `--with-license` | Add `LICENSE` (MIT by default) |
-| `--with-gitignore` | Add `.gitignore` preset |
-| `--with-vscode` | Add VS Code config |
-| `--with-ci` | Add GitHub Actions CI workflow |
-| `--author`, `--year` | Customize LICENSE metadata |
-| `--ci-python` | Set Python version for CI (default: 3.12) |
-
----
-
-## 📦 Installation
-
+### 1️⃣ Install
 ```powershell
 py -m pip install --upgrade reposmith-tol
 ```
 
-If PATH is not set:
+### 2️⃣ Create a new project
 ```powershell
-py -m reposmith init --entry run.py
+reposmith init --root demo --use-uv --with-brave --with-gitignore --with-license --with-vscode --force
 ```
 
----
-
-## 🧪 Development
-
-Run tests locally:
+### 3️⃣ Open & Run
 ```powershell
-python -m unittest discover -s tests -v
+code demo
+# or launch Brave dev profile
+pwsh -File .\demo\tools\launch_brave.ps1
 ```
 
 ---
 
-## 🗺️ Roadmap
+## 🧠 CLI Reference
 
-- [ ] Template packs (FastAPI, Django, React)
-- [ ] Interactive wizard mode
-- [ ] Multi-license support (MIT, Apache-2.0, GPL-3.0)
-- [ ] Full release automation via GitHub Actions
+| Flag | Description |
+|------|--------------|
+| `--force` | Overwrite existing files (creates `.bak` backups) |
+| `--use-uv` | Install dependencies using **uv** instead of pip |
+| `--with-brave` | Initialize Brave Dev Profile (`.brave-profile/`, PowerShell tools) |
+| `--with-vscode` | Add VS Code configuration (`settings.json`, `launch.json`) |
+| `--with-license` | Add MIT LICENSE file |
+| `--with-gitignore` | Add Python .gitignore preset |
+| `--root <path>` | Target project directory |
 
-> Track progress: [GitHub Projects ↗](https://github.com/orgs/liebemama/projects/2)
+Example:
+```powershell
+reposmith init --root MyApp --use-uv --with-brave --with-vscode
+```
 
 ---
 
-## 🧩 Repository Structure
+## 💡 Quick Summary
+
+| Command | Description |
+|----------|--------------|
+| `reposmith init` | Create a complete new project |
+| `reposmith brave-profile --init` | Add Brave profile and tools to an existing project |
+| `reposmith doctor` | Check environment health (upcoming) |
+| `reposmith --version` | Show current version |
+| `reposmith --help` | Display help menu |
+
+---
+
+## 🧩 Example Structure
 
 ```
-RepoSmith/
-├── reposmith/              # Core CLI + module
-├── on/                     # Shortcut package
-├── .github/                # CI, templates, discussions
-│   ├── ISSUE_TEMPLATE/     # bug.yml, feature.yml, etc.
-│   ├── DISCUSSION_TEMPLATE/
-│   └── workflows/          # ci.yml, codeql.yml, release.yml
-├── tests/                  # Unit tests
-├── examples/               # Sample projects
-├── pyproject.toml
-└── setup.py
+MyApp/
+├── main.py
+├── .venv/
+├── .brave-profile/
+├── tools/
+│   ├── launch_brave.ps1
+│   ├── make_brave_shortcut.ps1
+│   └── cleanup_brave_profile.ps1
+├── .vscode/
+│   ├── launch.json
+│   ├── settings.json
+│   └── tasks.json
+├── .github/
+│   └── workflows/ci.yml
+├── .gitignore
+└── LICENSE
 ```
+
+---
+
+## 💻 Development & Testing
+
+```powershell
+# Editable install
+uv pip install -e . --system
+
+# Run tests
+uv run pytest -q --cov=. --cov-report=term-missing
+```
+
+---
+
+## 🗺 Roadmap
+
+- [x] UV-based dependency installer  
+- [x] Brave profile integration  
+- [ ] Template packs (FastAPI, Streamlit, Django)  
+- [ ] Interactive wizard mode  
+- [ ] Multi-license support (MIT / Apache / GPL)
 
 ---
 
 ## 🛡 License
 
-This project is licensed under the [MIT License](https://github.com/liebemama/RepoSmith/blob/main/LICENSE).  
-© 2025 **TamerOnLine**
+Licensed under [MIT](LICENSE) © 2025 **Tamer Hamad Faour (@TamerOnLine)**  
 
 ---
 
-## 💬 Support & Community
+## 💬 Community & Support
 
-- 🐞 [Report a Bug](https://github.com/liebemama/RepoSmith/issues/new?template=bug.yml)
-- 💡 [Suggest a Feature](https://github.com/liebemama/RepoSmith/issues/new?template=feature.yml)
-- ✅ [Create a Task](https://github.com/liebemama/RepoSmith/issues/new?template=task.yml)
-- 💬 [Join Discussions](https://github.com/liebemama/RepoSmith/discussions)
-- 🔐 [Security Advisory Template](https://github.com/liebemama/RepoSmith/blob/main/ADVISORY_TEMPLATE.md)
-- 💖 [Sponsor the project](https://github.com/sponsors/liebemama)
-- 📧 [info@tameronline.com](mailto:info@tameronline.com)
+- 🐞 [Report a Bug](https://github.com/TamerOnLine/RepoSmith/issues/new?template=bug.yml)  
+- 💡 [Suggest a Feature](https://github.com/TamerOnLine/RepoSmith/issues/new?template=feature.yml)  
+- 💬 [Join Discussions](https://github.com/TamerOnLine/RepoSmith/discussions)  
+- 💖 [Support via GitHub Sponsors](https://github.com/sponsors/TamerOnLine)  
+- 📧 info@tameronline.com  
 
 ---
-
-## 🧠 Code of Conduct
-
-This project follows the [Contributor Covenant Code of Conduct](.github/CODE_OF_CONDUCT.md).  
-Please review it to ensure a welcoming and inclusive community.

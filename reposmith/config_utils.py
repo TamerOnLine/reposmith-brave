@@ -1,7 +1,7 @@
 import json
 from pathlib import Path
-from .core.fs import write_file
 
+from .core.fs import write_file
 
 def load_or_create_config(root_dir: Path) -> dict:
     """

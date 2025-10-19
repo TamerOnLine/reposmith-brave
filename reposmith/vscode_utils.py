@@ -1,41 +1,28 @@
-# reposmith/vscode_utils.py
 from __future__ import annotations
 
-import os
 import json
+import os
 from pathlib import Path
 
 from .core.fs import write_file
-
-
-import os
-from pathlib import Path
-
 
 def _venv_python_path(venv_dir: Path) -> str:
     """
     Return the Python interpreter path for Visual Studio Code.
 
-    This function determines the appropriate Python interpreter path 
-    based on the presence of a virtual environment (venv). 
-
     Args:
         venv_dir (Path): The directory of the virtual environment.
 
     Returns:
-        str: The path to the Python interpreter. 
-             - If the venv exists, its interpreter is used.
-             - Otherwise, falls back to 'python.exe' (Windows) 
-               or 'python3' (Linux/Mac).
+        str: The path to the Python interpreter.
+             Falls back to system default if not found in venv.
     """
     if os.name == "nt":
-        candidate = Path(venv_dir) / "Scripts" / "python.exe"
+        candidate = venv_dir / "Scripts" / "python.exe"
         return str(candidate) if candidate.exists() else "python.exe"
     else:
-        candidate = Path(venv_dir) / "bin" / "python3"
+        candidate = venv_dir / "bin" / "python3"
         return str(candidate) if candidate.exists() else "python3"
-
-
 
 def create_vscode_files(
     root_dir: Path,
@@ -47,19 +34,16 @@ def create_vscode_files(
     """
     Safely create/update VS Code configuration files for a project.
 
-    This function generates the following:
-        - .vscode/settings.json: Sets Python interpreter from the virtual environment.
-        - .vscode/launch.json: Configures debugging for the main script.
-        - project.code-workspace: Creates a simple workspace file.
+    Generates:
+        - .vscode/settings.json: Python interpreter from venv.
+        - .vscode/launch.json: Debug config for main script.
+        - project.code-workspace: Workspace with Python settings.
 
     Args:
-        root_dir (Path): Project root directory where files will be created.
+        root_dir (Path): Project root directory.
         venv_dir (Path): Path to the virtual environment.
-        main_file (str, optional): Name of the main file to run. Defaults to "main.py".
-        force (bool, optional): Overwrite existing files if True. Defaults to False.
-
-    Returns:
-        None
+        main_file (str, optional): Main script name. Defaults to "main.py".
+        force (bool, optional): Overwrite files if True. Defaults to False.
     """
     root = Path(root_dir)
     vscode = root / ".vscode"
@@ -71,13 +55,10 @@ def create_vscode_files(
     settings = {
         "python.defaultInterpreterPath": py_path,
         "python.analysis.autoImportCompletions": True,
-        "terminal.integrated.env.windows": {
-            # Placeholder for environment variables if needed
-        },
+        "terminal.integrated.env.windows": {},
     }
-    settings_path = vscode / "settings.json"
     write_file(
-        settings_path,
+        vscode / "settings.json",
         json.dumps(settings, indent=2),
         force=force,
         backup=True,
@@ -96,27 +77,23 @@ def create_vscode_files(
             }
         ],
     }
-    launch_path = vscode / "launch.json"
     write_file(
-        launch_path,
+        vscode / "launch.json",
         json.dumps(launch, indent=2),
         force=force,
         backup=True,
     )
 
-    # workspace (optional but useful)
+    # project.code-workspace
     workspace = {
         "folders": [{"path": "."}],
         "settings": {"python.defaultInterpreterPath": py_path},
     }
-    ws_path = root / "project.code-workspace"
     write_file(
-        ws_path,
+        root / "project.code-workspace",
         json.dumps(workspace, indent=2),
         force=force,
         backup=True,
     )
 
-    print(
-        "VS Code files updated: settings.json, launch.json, project.code-workspace"
-    )
+    print("VS Code files updated: settings.json, launch.json, project.code-workspace")

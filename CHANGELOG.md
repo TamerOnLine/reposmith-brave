@@ -5,6 +5,102 @@ This project follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.3.7] - 2025-10-19
+### Added
+- Main branch ruleset (block force-push, require PR & checks).
+- CI guard: fail release if changelog section missing.
+
+### Changed
+- Improve Brave profile init on Windows.
+
+### Fixed
+- Path handling and minor CLI issues.
+
+---
+
+## [0.3.6] - 2025-10-19
+### Added
+- New `reposmith doctor` command to check environment health (Python, git, pip, uv, .venv, pyproject).
+- Added `--all` flag to `reposmith init` to enable all recommended options automatically.
+- Enhanced CLI logging and emoji output consistency.
+- Improved project initialization flow with safer overwrite handling.
+- Local build and test verification using standard Python tools (`build`, `twine`).
+
+### Changed
+- Major refactor of `cli.py` with unified parser and new subcommands.
+- Streamlined environment detection and logging format.
+- Updated default behavior of `init` for better UX.
+
+### Fixed
+- Minor path handling issues on Windows.
+- Fixed `--force` not applying correctly in some init steps.
+
+---
+
+## [0.3.5] - 2025-10-19
+### Added
+- 
+
+### Changed
+- 
+
+### Fixed
+- 
+
+---
+
+
+## [0.3.4] - 2025-10-19
+### Added
+- New **publish pipeline guard**: verifies Git tag matches `pyproject.toml` version and that `CHANGELOG.md` contains the current section; auto-extracts release notes. (see `.github/workflows/publish.yml`)
+- **uv-based build** in publish pipeline with artifacts upload and automated GitHub Release creation.
+
+### Changed
+- CI/publish workflows refined for clearer release flow and VS Code warning removal by defining `PYPI_API_TOKEN` at the job `env` level.
+
+### Fixed
+- More robust Windows CI logs by allowing emoji-free runs via `REPOSMITH_NO_EMOJI=1`.
+
+
+---
+
+
+## [0.3.3] - 2025-10-19
+### Added
+- Full `--with-brave` integration in CLI.
+- VS Code generator now includes `tasks.json`.
+- Logging system redesigned with colorized console output.
+
+### Fixed
+- Compatibility on Windows paths and uv environments.
+
+---
+
+## [0.3.2] - 2025-10-15
+### Added
+- Automatic GitHub Actions CI generator (`.github/workflows/unit-tests.yml`).
+- Safer environment detection for Python 3.13+.
+
+---
+
+## [0.3.1] - 2025-10-10
+### Changed
+- Improved structure of `serve-manager` and portable setup.py entry.
+- Refined internal path handling via `__file__` + `os.path`.
+
+---
+
+## [0.3.0] - 2025-10-05
+### Added
+- Major refactor to modular utilities:
+  - `logging_utils`, `venv_utils`, `brave_profile`, `vscode_utils`.
+- New CLI commands:
+  ```bash
+  reposmith init
+  reposmith brave-profile --init
+
+---
+
 ## [0.2.10] - 2025-09-07
 ### Added
 - New `on/` helper package in repo root to allow shorter execution:
