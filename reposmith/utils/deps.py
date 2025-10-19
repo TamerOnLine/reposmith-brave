@@ -3,12 +3,29 @@ import subprocess, os
 from pathlib import Path
 from .paths import venv_python
 
+
 def post_init_dependency_setup(root: Path, prefer_uv: bool = True) -> None:
     """
-    - إن وُجد requirements.txt → تثبيت (uv ثم pip fallback).
-    - إن لم يوجد → إن كان prefer_uv=True شغّل uv init (إن لم يوجد pyproject.toml).
+    Set up dependencies after project initialization.
+
+    This function performs the following steps:
+    - If a requirements.txt file is found, installs dependencies using uv or pip.
+    - If no requirements.txt is found, ensures uv is installed and initializes pyproject.toml.
+
+    Args:
+        root (Path): The root directory of the project.
+        prefer_uv (bool, optional): Whether to prefer uv over pip. Defaults to True.
+
+    Returns:
+        None
+
+    Notes:
+        - If no Python interpreter is found in the .venv directory, the function exits early.
+        - Exceptions during uv operations fall back to using pip.
     """
-    py = venv_python(root)
+    venv_dir = root / ".venv"
+    py = venv_python(venv_dir)
+    
     if not py.exists():
         print("[INFO] No Python interpreter in .venv — skipping dependency setup.")
         return
@@ -25,6 +42,7 @@ def post_init_dependency_setup(root: Path, prefer_uv: bool = True) -> None:
             print("[uv] requirements.txt detected → installing via uv...")
             try:
                 run([str(py), "-m", "pip", "install", "--upgrade", "pip"])
+                run([str(py), "-m", "pip", "install", "--upgrade", "uv"])
                 run([str(py), "-m", "uv", "pip", "install", "-r", str(req)])
                 return
             except Exception:
@@ -34,13 +52,25 @@ def post_init_dependency_setup(root: Path, prefer_uv: bool = True) -> None:
         return
 
     if prefer_uv:
-        if pyproject.exists():
+        print("[check] Ensuring uv is available inside the venv...")
+        rc = subprocess.run(
+            [str(py), "-m", "pip", "show", "uv"],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL
+        ).returncode
+        if rc != 0:
+            print("[install] uv not found → installing now...")
+            run([str(py), "-m", "pip", "install", "--upgrade", "uv"])
+        else:
+            print("[check] uv already installed inside .venv ✅")
+
+        if not pyproject.exists():
+            print("[uv] No requirements.txt found → initializing pyproject.toml via uv init...")
+            try:
+                run([str(py), "-m", "uv", "init"])
+            except Exception as e:
+                print(f"[WARN] uv init failed: {e}")
+        else:
             print("[uv] pyproject.toml already exists — skipping uv init.")
-            return
-        print("[uv] No requirements.txt found → initializing pyproject.toml via uv init...")
-        try:
-            run([str(py), "-m", "uv", "init"])
-        except Exception as e:
-            print(f"[WARN] uv init failed: {e}")
     else:
         print("[INFO] No requirements.txt and prefer_uv=False — nothing to do.")
