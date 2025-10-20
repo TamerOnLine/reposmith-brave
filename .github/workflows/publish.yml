@@ -39,7 +39,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Set up Python ${{ env.PY_VER }}
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: ${{ env.PY_VER }}
 
@@ -124,7 +124,7 @@ jobs:
           fetch-depth: 0
 
       - name: Set up Python ${{ env.PY_VER }}
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: ${{ env.PY_VER }}
 
