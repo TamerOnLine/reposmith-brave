@@ -2,20 +2,20 @@ name: CI
 
 on:
   pull_request:
-    branches: [ "main", "dev" ]
+    branches: [ "main" ]
     types: [opened, synchronize, reopened, ready_for_review]
     paths-ignore:
       - "*.md"
       - "docs/**"
       - ".github/ISSUE_TEMPLATE/**"
-
   push:
-    branches: [ "main", "dev" ]
+    branches: [ "main" ]
+    tags:
+      - "v*"
     paths-ignore:
       - "*.md"
       - "docs/**"
       - ".github/ISSUE_TEMPLATE/**"
-
   workflow_dispatch:
 
 permissions:
@@ -42,7 +42,7 @@ jobs:
         os: [ubuntu-latest, windows-latest, macos-latest]
         python-version: ["3.12", "3.13"]
 
-    # ⛳️ تجاهل الـ Draft PR
+    # Ignore draft PRs
     if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
 
     steps:
@@ -55,23 +55,45 @@ jobs:
           python-version: ${{ matrix.python-version }}
           cache: pip
 
-      - name: Install dependencies
+      - name: Install uv (fast Python package manager)
         run: |
           python -m pip install --upgrade pip
-          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          python -m pip install --upgrade uv
+
+      - name: Install project (editable) + test deps
+        run: |
           if [ -f pyproject.toml ] || [ -f setup.cfg ] || [ -f setup.py ]; then
-            pip install -e .
+            # prefer uv (fast); fallback to pip if needed
+            if uv pip install -e .; then
+              uv pip install pytest pytest-cov
+            else
+              pip install -e .
+              pip install pytest pytest-cov
+            fi
+          else
+            # if repo has only tests or a subset
+            uv pip install pytest pytest-cov || pip install pytest pytest-cov
           fi
-          pip install pytest pytest-cov
 
       - name: Run tests with coverage
-        run: pytest -q --cov=. --cov-report=term-missing
+        run: |
+          pytest -q -ra --cov=. --cov-report=term-missing
+        env:
+          PYTHONUTF8: "1"
+
+      - name: Upload coverage (artifact)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-${{ matrix.os }}-${{ matrix.python-version }}
+          path: ./.coverage*
+          if-no-files-found: ignore
 
   build:
     name: Build package
     runs-on: ubuntu-latest
     needs: test
-    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+    if: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/main') || startsWith(github.ref, 'refs/tags/v') }}
     timeout-minutes: 15
     permissions:
       contents: read

@@ -1,9 +1,9 @@
-name: Publish (with Changelog Guard)
+name: "Publish (with Changelog Guard)"
 
 on:
   push:
     tags:
-      - 'v*.*.*'          # Trigger when pushing tags like v0.3.4
+      - 'v*.*.*'          # e.g. v0.3.9
   workflow_dispatch:
     inputs:
       dry_run:
@@ -11,7 +11,7 @@ on:
         required: false
         default: 'false'
       tag:
-        description: 'Optional tag to release (e.g., v0.3.4). Leave empty to skip.'
+        description: 'Optional tag to release (e.g., v0.3.9). Leave empty to use current commit.'
         required: false
         default: ''
 
@@ -21,22 +21,21 @@ concurrency:
 
 permissions:
   contents: write
-  id-token: write
   actions: read
+  # id-token: write   # <-- only needed for OIDC-based publish (not used here)
 
 env:
   PY_VER: '3.12'
 
 jobs:
-  # ========================================
-  # 1) CHANGELOG GUARD
-  # ========================================
   changelog_guard:
     name: Changelog Guard
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up Python ${{ env.PY_VER }}
         uses: actions/setup-python@v5
@@ -49,25 +48,27 @@ jobs:
           python - << 'PY'
           import pathlib, sys
           try:
-              import tomllib
+              import tomllib  # py3.11+
           except ModuleNotFoundError:
               import tomli as tomllib
 
           py = pathlib.Path("pyproject.toml")
           if not py.exists():
-              print("::error::pyproject.toml not found")
+              print("pyproject.toml not found", file=sys.stderr)
               sys.exit(1)
 
           with py.open("rb") as fp:
               d = tomllib.load(fp)
 
-          v = d.get("project", {}).get("version") or d.get("tool", {}).get("poetry", {}).get("version")
+          v = (d.get("project", {}) or {}).get("version") \
+              or (d.get("tool", {}) or {}).get("poetry", {}).get("version")
           if not v:
-              print("::error::No version found in pyproject.toml")
+              print("No version found in pyproject.toml", file=sys.stderr)
               sys.exit(1)
 
           print(f"version={v}")
-          print(f"::set-output name=version::{v}")
+          with open("${GITHUB_OUTPUT}", "a", encoding="utf-8") as gh:
+              gh.write(f"version={v}\n")
           PY
 
       - name: Ensure tag (if push) matches pyproject version
@@ -84,10 +85,13 @@ jobs:
       - name: Verify CHANGELOG contains current version
         run: |
           VER="${{ steps.ver.outputs.version }}"
-          echo "Checking CHANGELOG for [$VER] ..."
           test -f CHANGELOG.md || { echo "::error::CHANGELOG.md is missing"; exit 1; }
-          grep -E "^## \[\s*${VER}\s*\]" CHANGELOG.md >/dev/null || { echo "::error::CHANGELOG missing entry for ${VER}"; exit 1; }
-          echo "✓ CHANGELOG contains [$VER]"
+          # Use fixed-string match to avoid regex surprises with dots:
+          if ! grep -Fq "## [${VER}]" CHANGELOG.md; then
+            echo "::error::CHANGELOG missing entry for ${VER}"
+            exit 1
+          fi
+          echo "✓ CHANGELOG contains [${VER}]"
 
       - name: Warn if Added/Changed/Fixed sections are all empty
         continue-on-error: true
@@ -99,20 +103,13 @@ jobs:
             in_block {print}
           ' CHANGELOG.md > .ch_block.txt
 
-          if grep -q "### Added" .ch_block.txt && \
-             grep -q "### Changed" .ch_block.txt && \
-             grep -q "### Fixed" .ch_block.txt; then
-            lines=$(grep -E "^- " .ch_block.txt | wc -l | tr -d ' ')
-            if [ "$lines" -eq 0 ]; then
-              echo "::warning::CHANGELOG section for ${VER} seems empty (no bullet points)."
-            else
-              echo "✓ CHANGELOG has $lines bullet item(s)."
-            fi
+          bullets=$(grep -E "^- " .ch_block.txt | wc -l | tr -d ' ')
+          if [ "$bullets" -eq 0 ]; then
+            echo "::warning::CHANGELOG section for ${VER} seems empty (no bullet points)."
+          else
+            echo "✓ CHANGELOG has $bullets bullet item(s)."
           fi
 
-  # ========================================
-  # 2) BUILD (via uv)
-  # ========================================
   build:
     name: Build (sdist + wheel)
     needs: changelog_guard
@@ -122,6 +119,8 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          # If running via workflow_dispatch with a 'tag' input, check it out:
+          ref: ${{ inputs.tag != '' && inputs.tag || '' }}
 
       - name: Set up Python ${{ env.PY_VER }}
         uses: actions/setup-python@v5
@@ -142,19 +141,18 @@ jobs:
           name: dist
           path: dist/*
 
-  # ========================================
-  # 3) PUBLISH TO PYPI (with env)
-  # ========================================
   publish_pypi:
     name: Publish to PyPI
     needs: build
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
-
-    # ✅ define env variable here (removes VS Code warning)
+    # Publish on version tags OR manual dispatch when dry_run == 'false'
+    if: >
+      (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')) ||
+      (github.event_name == 'workflow_dispatch' && inputs.dry_run == 'false')
+    permissions:
+      contents: read
     env:
       PYPI_API_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
-
     steps:
       - name: Download artifacts
         uses: actions/download-artifact@v4
@@ -168,10 +166,8 @@ jobs:
           packages-dir: dist
           user: __token__
           password: ${{ env.PYPI_API_TOKEN }}
+          skip-existing: true
 
-  # ========================================
-  # 4) GITHUB RELEASE
-  # ========================================
   github_release:
     name: Create GitHub Release
     needs: build
@@ -204,7 +200,6 @@ jobs:
             in_block && $0 ~ "^## \\[" {in_block=0}
             in_block {print}
           ' CHANGELOG.md > RELEASE_NOTES.md
-
           echo "-------- RELEASE NOTES --------"
           cat RELEASE_NOTES.md || true
           echo "--------------------------------"

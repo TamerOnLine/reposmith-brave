@@ -7,12 +7,12 @@ from pathlib import Path
 from .logging_utils import setup_logging
 from .commands.init_cmd import run_init
 from .commands.doctor_cmd import run_doctor
-from .commands.brave_cmd import run_brave
+# تم حذف: from .commands.brave_cmd import run_brave
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="reposmith",
-        description="RepoSmith: Bootstrap Python projects (venv + uv + Brave)",
+        description="RepoSmith: Bootstrap Python projects (venv + uv)",
     )
     try:
         ver = version("reposmith-tol")
@@ -37,12 +37,10 @@ def build_parser() -> argparse.ArgumentParser:
     sc.add_argument("--with-gitignore", action="store_true")
     sc.add_argument("--with-vscode", action="store_true")
     sc.add_argument("--use-uv", action="store_true")
-    sc.add_argument("--with-brave", action="store_true")
+    # تم حذف: sc.add_argument("--with-brave", action="store_true")
     sc.add_argument("--all", action="store_true")
 
-    bp = sub.add_parser("brave-profile", help="Manage Brave dev profile scaffolding")
-    bp.add_argument("--root", type=Path, default=Path.cwd())
-    bp.add_argument("--init", action="store_true")
+    # تم حذف الأمر الفرعي بالكامل: brave-profile
 
     sub.add_parser("doctor", help="Check environment health")
     return parser
@@ -55,8 +53,7 @@ def main() -> int | None:
 
     if args.cmd == "init":
         return run_init(args, logger)
-    if args.cmd == "brave-profile" and args.init:
-        return run_brave(args, logger)
+    # تم حذف مسار brave-profile
     if args.cmd == "doctor":
         return run_doctor(logger)
 

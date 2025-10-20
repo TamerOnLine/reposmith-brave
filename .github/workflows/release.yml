@@ -3,33 +3,49 @@ name: Release from tag
 on:
   push:
     tags:
-      - 'v*'          # Runs automatically when pushing any tag like v0.2.7
-  workflow_dispatch:   # Allows manual run
+      - 'v*.*.*'     # e.g. v0.3.9
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Optional tag to release (e.g., v0.3.9). Leave empty to use current ref.'
+        required: false
+        default: ''
 
 permissions:
-  contents: write      # Required to create a Release
+  contents: write      # needed to create a GitHub Release
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   make-release:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          # If manual run with a specific tag, check it out:
+          ref: ${{ inputs.tag != '' && inputs.tag || '' }}
 
       - name: Get version from tag
         id: v
         run: |
           tag="${GITHUB_REF##*/}"
-          echo "tag=$tag" >> $GITHUB_OUTPUT
-          echo "version=${tag#v}" >> $GITHUB_OUTPUT
+          if [ -n "${{ inputs.tag }}" ]; then
+            tag="${{ inputs.tag }}"
+          fi
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "version=${tag#v}" >> "$GITHUB_OUTPUT"
 
-      - name: Ensure changelog section exists
+      - name: Ensure CHANGELOG.md has a section for this version
         run: |
           ver="${{ steps.v.outputs.version }}"
-          if ! grep -q "^## \\[$ver\\]" CHANGELOG.md; then
-            echo "❌ CHANGELOG.md does not contain section for [$ver]"
+          test -f CHANGELOG.md || { echo "::error::CHANGELOG.md is missing"; exit 1; }
+          # Fixed-string match (no regex surprises with dots)
+          if ! grep -Fq "## [${ver}]" CHANGELOG.md; then
+            echo "::error::CHANGELOG.md does not contain section for [${ver}]"
             exit 1
           fi
 
@@ -38,28 +54,22 @@ jobs:
         shell: bash
         run: |
           ver="${{ steps.v.outputs.version }}"
-
-          # Extract lines from the [ver] header until the next version header.
-          # Normalize CRLF->LF to avoid matching issues on Windows-edited files.
+          # Normalize CRLF -> LF and extract until next version header
           awk -v ver="$ver" '
-            { sub(/\r$/, "", $0) }                       # normalize CRLF -> LF
-            $0 ~ "^## \\[" ver "\\]" {flag=1; next}      # start at "## [ver]"
-            flag && $0 ~ "^## \\[" {flag=0}              # stop at next "## ["
+            { sub(/\r$/, "", $0) }
+            $0 ~ "^## \\[" ver "\\]" {flag=1; next}
+            flag && $0 ~ "^## \\[" {flag=0}
             flag {print}
           ' CHANGELOG.md > RELEASE_NOTES.md
 
-          # Fail if release notes are empty
           if [ ! -s RELEASE_NOTES.md ]; then
-            echo "❌ RELEASE_NOTES.md is empty for version [$ver]."
-            echo "   Make sure CHANGELOG.md has a section: ## [$ver]"
+            echo "::error::RELEASE_NOTES.md is empty for version [$ver]."
             exit 1
           fi
 
-          # Diagnostics
-          bytes=$(wc -c < RELEASE_NOTES.md | tr -d ' ')
-          echo "bytes=$bytes" >> $GITHUB_OUTPUT
-          echo "----- RELEASE NOTES -----"
-          cat RELEASE_NOTES.md || true
+          echo "----- RELEASE NOTES (preview) -----"
+          head -n 50 RELEASE_NOTES.md || true
+          echo "-----------------------------------"
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2

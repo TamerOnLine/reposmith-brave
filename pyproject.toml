@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "reposmith-tol"
-version = "0.3.8"
-description = "Portable Python project bootstrapper with venv, uv, Brave profile, VS Code, and CI integration."
+version = "0.3.9"
+description = "Portable Python project bootstrapper with venv, uv, VS Code, and CI integration."
 readme = "README.md"
 requires-python = ">=3.12"
 
@@ -14,7 +14,7 @@ authors = [
 ]
 
 keywords = [
-  "bootstrap", "venv", "uv", "brave", "vscode",
+  "bootstrap", "venv", "uv", "vscode",
   "license", "scaffold", "cli", "project-generator"
 ]
 
@@ -47,8 +47,10 @@ reposmith = "reposmith.cli:main"
 [tool.setuptools]
 include-package-data = true
 
+# If you no longer ship any static JSON files inside the package, 
+# you can safely remove this section.
 [tool.setuptools.package-data]
-reposmith = ["**/*.ps1", "**/*.sh", "**/*.json"]
+reposmith = ["**/*.json"]
 
 [tool.setuptools.packages.find]
 where = ["."]
