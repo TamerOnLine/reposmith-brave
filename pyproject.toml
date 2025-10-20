@@ -51,8 +51,9 @@ Issues = "https://github.com/TamerOnLine/reposmith-brave/issues"
 [project.scripts]
 reposmith = "reposmith.cli:main"
 
-[tool.setuptools]
-packages = ["reposmith"]
+[tool.setuptools.packages.find]
+include = ["reposmith*"]
+
 
 [tool.setuptools.package-data]
 reposmith = ["py.typed"]
