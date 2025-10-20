@@ -1,57 +1,65 @@
 [build-system]
-requires = ["setuptools>=77.0.0", "wheel"]
+requires = ["setuptools>=77.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "reposmith-tol"
 version = "0.3.9"
-description = "Portable Python project bootstrapper with venv, uv, VS Code, and CI integration."
+description = "Next-generation Python project bootstrapper with UV, Brave, and VS Code integration."
 readme = "README.md"
-requires-python = ">=3.12"
-
+requires-python = ">=3.9"
 authors = [
   { name = "Tamer Hamad Faour", email = "info@tameronline.com" }
 ]
-
-keywords = [
-  "bootstrap", "venv", "uv", "vscode",
-  "license", "scaffold", "cli", "project-generator"
-]
-
-license = { text = "MIT" }
+license = "MIT"
+license-files = ["LICENSE"]
+keywords = ["bootstrapper", "python", "project-generator", "fastapi", "uv", "brave", "vscode"]
 
 classifiers = [
   "Development Status :: 5 - Production/Stable",
-  "Environment :: Console",
   "Intended Audience :: Developers",
-  "License :: OSI Approved :: MIT License",
   "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
-  "Programming Language :: Python :: 3.13",
-  "Operating System :: OS Independent",
   "Topic :: Software Development :: Build Tools",
-  "Topic :: Utilities"
+  "Operating System :: OS Independent"
+]
+
+dependencies = [
+  "click>=8.0",
+  "colorama>=0.4",
+  "tomlkit>=0.11"
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest",
+  "pytest-cov",
+  "build",
+  "twine",
+  "ruff",
 ]
 
 [project.urls]
-Homepage = "https://github.com/TamerOnLine/RepoSmith"
-Repository = "https://github.com/TamerOnLine/RepoSmith"
-Issues = "https://github.com/TamerOnLine/RepoSmith/issues"
-Documentation = "https://tameronline.github.io/RepoSmith/"
-Sponsor = "https://github.com/sponsors/TamerOnLine"
-Discussions = "https://github.com/TamerOnLine/RepoSmith/discussions"
+Homepage = "https://github.com/TamerOnLine/reposmith-brave"
+Documentation = "https://github.com/TamerOnLine/reposmith-brave#readme"
+Source = "https://github.com/TamerOnLine/reposmith-brave"
+Issues = "https://github.com/TamerOnLine/reposmith-brave/issues"
 
 [project.scripts]
 reposmith = "reposmith.cli:main"
 
 [tool.setuptools]
-include-package-data = true
+packages = ["reposmith"]
 
-# If you no longer ship any static JSON files inside the package, 
-# you can safely remove this section.
 [tool.setuptools.package-data]
-reposmith = ["**/*.json"]
+reposmith = ["py.typed"]
 
-[tool.setuptools.packages.find]
-where = ["."]
-include = ["reposmith*"]
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+select = ["E", "F", "W", "I"]
+ignore = ["E501"]
+fix = true
